@@ -4,6 +4,9 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local GuiService = game:GetService("GuiService")
 local ScriptContext = game:GetService("ScriptContext")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local Terrain = Workspace:FindFirstChildOfClass("Terrain")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally, otherwise default placeholder
@@ -55,53 +58,245 @@ pcall(function()
     end
 end)
 
-if targetParent:FindFirstChild("AutoRejoinToggleGUI") then
-    targetParent.AutoRejoinToggleGUI:Destroy()
+if targetParent:FindFirstChild("HennessyHubGUI") then
+    targetParent.HennessyHubGUI:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoRejoinToggleGUI"
+screenGui.Name = "HennessyHubGUI"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.DisplayOrder = 2147483647
 screenGui.Parent = targetParent
 
--- Single Toggle Button (Auto Reconnect)
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 110, 0, 40)
-toggleButton.Position = UDim2.new(0, 20, 0, 100)
-toggleButton.BackgroundColor3 = Color3.fromRGB(32, 36, 50)
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.Text = "Auto Recon: On"
-toggleButton.TextColor3 = Color3.fromRGB(100, 255, 150)
-toggleButton.TextSize = 11
-toggleButton.ZIndex = 10
-toggleButton.Parent = screenGui
+-- ========================================================================
+-- MAIN HENNESSY MENU BAR (Draggable & Dropdown Toggle)
+-- ========================================================================
+local mainButton = Instance.new("TextButton")
+mainButton.Size = UDim2.new(0, 160, 0, 38)
+mainButton.Position = UDim2.new(0, 20, 0, 100)
+mainButton.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+mainButton.Font = Enum.Font.Gotham
+mainButton.Text = "  Hennessy"
+mainButton.TextColor3 = Color3.fromRGB(210, 215, 225)
+mainButton.TextSize = 13
+mainButton.TextXAlignment = Enum.TextXAlignment.Left
+mainButton.ZIndex = 20
+mainButton.Parent = screenGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = toggleButton
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 8)
+mainCorner.Parent = mainButton
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(60, 70, 95)
-stroke.Thickness = 1.5
-stroke.Parent = toggleButton
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(55, 62, 80)
+mainStroke.Thickness = 1.5
+mainStroke.Parent = mainButton
+
+-- Master Kill Switch Button (X)
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 26, 0, 26)
+closeButton.Position = UDim2.new(1, -30, 0.5, -13)
+closeButton.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
+closeButton.Font = Enum.Font.Gotham
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(180, 185, 195)
+closeButton.TextSize = 12
+closeButton.ZIndex = 22
+closeButton.Parent = mainButton
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeButton
+
+-- ========================================================================
+-- DROPDOWN CONTAINER (Holds Auto Recon & FPS Booster buttons)
+-- ========================================================================
+local dropdownContainer = Instance.new("Frame")
+dropdownContainer.Size = UDim2.new(0, 160, 0, 85)
+dropdownContainer.Position = UDim2.new(0, 0, 1, 6)
+dropdownContainer.BackgroundTransparency = 1
+dropdownContainer.Visible = false
+dropdownContainer.ZIndex = 15
+dropdownContainer.Parent = mainButton
+
+-- 1. Auto Recon Radio Toggle Button
+local autoReconBtn = Instance.new("TextButton")
+autoReconBtn.Size = UDim2.new(0, 160, 0, 38)
+autoReconBtn.Position = UDim2.new(0, 0, 0, 0)
+autoReconBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+autoReconBtn.Font = Enum.Font.Gotham
+autoReconBtn.Text = "  Auto Recon: On"
+autoReconBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
+autoReconBtn.TextSize = 12
+autoReconBtn.TextXAlignment = Enum.TextXAlignment.Left
+autoReconBtn.ZIndex = 16
+autoReconBtn.Parent = dropdownContainer
+
+local arCorner = Instance.new("UICorner")
+arCorner.CornerRadius = UDim.new(0, 8)
+arCorner.Parent = autoReconBtn
+
+local arStroke = Instance.new("UIStroke")
+arStroke.Color = Color3.fromRGB(55, 62, 80)
+arStroke.Thickness = 1.5
+arStroke.Parent = autoReconBtn
 
 getgenv().AutoRejoinActive = true
 
-toggleButton.MouseButton1Click:Connect(function()
+autoReconBtn.MouseButton1Click:Connect(function()
     getgenv().AutoRejoinActive = not getgenv().AutoRejoinActive
     if getgenv().AutoRejoinActive then
-        toggleButton.Text = "Auto Recon: On"
-        toggleButton.TextColor3 = Color3.fromRGB(100, 255, 150)
+        autoReconBtn.Text = "  Auto Recon: On"
     else
-        toggleButton.Text = "Auto Recon: Off"
-        toggleButton.TextColor3 = Color3.fromRGB(255, 100, 150)
+        autoReconBtn.Text = "  Auto Recon: Off"
+    end
+end)
+
+-- 2. FPS Booster Toggle Button (Default: ON)
+local fpsBtn = Instance.new("TextButton")
+fpsBtn.Size = UDim2.new(0, 160, 0, 38)
+fpsBtn.Position = UDim2.new(0, 0, 0, 44)
+fpsBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+fpsBtn.Font = Enum.Font.Gotham
+fpsBtn.Text = "  FPS Booster: On"
+fpsBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
+fpsBtn.TextSize = 12
+fpsBtn.TextXAlignment = Enum.TextXAlignment.Left
+fpsBtn.ZIndex = 16
+fpsBtn.Parent = dropdownContainer
+
+local fpsCorner = Instance.new("UICorner")
+fpsCorner.CornerRadius = UDim.new(0, 8)
+fpsCorner.Parent = fpsBtn
+
+local fpsStroke = Instance.new("UIStroke")
+fpsStroke.Color = Color3.fromRGB(55, 62, 80)
+fpsStroke.Thickness = 1.5
+fpsStroke.Parent = fpsBtn
+
+local storedObjects = {}
+
+local function applyBoost()
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 1
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("PostEffect") or v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+                v.Enabled = false
+                table.insert(storedObjects, v)
+            end
+        end
+    end)
+
+    pcall(function()
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterTransparency = 1
+        end
+    end)
+
+    -- Forcefully strip heavy particle emitters, trails, and heavy effects across workspace
+    pcall(function()
+        for _, descendant in ipairs(Workspace:GetDescendants()) do
+            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") or descendant:IsA("Explosion") then
+                descendant.Enabled = false
+                table.insert(storedObjects, descendant)
+            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+                descendant.Transparency = 1
+                table.insert(storedObjects, descendant)
+            end
+        end
+    end)
+end
+
+local function restoreOriginal()
+    pcall(function()
+        Lighting.GlobalShadows = true
+    end)
+    for _, obj in ipairs(storedObjects) do
+        if obj and obj.Parent then
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("PostEffect") or obj:IsA("Sky") or obj:IsA("Atmosphere") or obj:IsA("Clouds") then
+                obj.Enabled = true
+            elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                obj.Transparency = 0
+            end
+        end
+    end
+    storedObjects = {}
+end
+
+local boosterActive = true
+applyBoost()
+
+fpsBtn.MouseButton1Click:Connect(function()
+    boosterActive = not boosterActive
+    if boosterActive then
+        fpsBtn.Text = "  FPS Booster: On"
+        applyBoost()
+    else
+        fpsBtn.Text = "  FPS Booster: Off"
+        restoreOriginal()
     end
 end)
 
 -- ========================================================================
--- WEBHOOK POPUP PROMPT (Textbox, Submit Button, & Kill Switch 'X')
+-- DRAGGABLE LOGIC
+-- ========================================================================
+local UIS = game:GetService("UserInputService")
+local dragging, dragInput, dragStart, startPos
+local hasMoved = false
+
+mainButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        hasMoved = false
+        dragStart = input.Position
+        startPos = mainButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        if delta.Magnitude > 3 then
+            hasMoved = true
+        end
+        mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+mainButton.MouseButton1Click:Connect(function()
+    if hasMoved then
+        hasMoved = false
+        return
+    end
+    
+    dropdownContainer.Visible = not dropdownContainer.Visible
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    getgenv().AutoRejoinActive = false
+    restoreOriginal()
+    screenGui:Destroy()
+end)
+
+-- ========================================================================
+-- WEBHOOK POPUP PROMPT
 -- ========================================================================
 local function createWebhookPopup()
     if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
@@ -119,7 +314,7 @@ local function createWebhookPopup()
     promptFrame.Size = UDim2.new(0, 360, 0, 160)
     promptFrame.AnchorPoint = Vector2.new(0.5, 0.5)
     promptFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    promptFrame.BackgroundColor3 = Color3.fromRGB(20, 24, 38)
+    promptFrame.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
     promptFrame.BorderSizePixel = 0
     promptFrame.ZIndex = 1000
     promptFrame.Parent = screenGui
@@ -129,52 +324,46 @@ local function createWebhookPopup()
     frameCorner.Parent = promptFrame
 
     local frameStroke = Instance.new("UIStroke")
-    frameStroke.Color = Color3.fromRGB(0, 150, 255)
-    frameStroke.Thickness = 2
+    frameStroke.Color = Color3.fromRGB(55, 62, 80)
+    frameStroke.Thickness = 1.5
     frameStroke.Parent = promptFrame
 
     local promptTitle = Instance.new("TextLabel")
     promptTitle.Size = UDim2.new(1, -50, 0, 40)
     promptTitle.Position = UDim2.new(0, 15, 0, 10)
     promptTitle.BackgroundTransparency = 1
-    promptTitle.Font = Enum.Font.GothamBold
+    promptTitle.Font = Enum.Font.Gotham
     promptTitle.Text = "Enter Discord Webhook URL"
-    promptTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    promptTitle.TextSize = 16
+    promptTitle.TextColor3 = Color3.fromRGB(210, 215, 225)
+    promptTitle.TextSize = 15
     promptTitle.TextXAlignment = Enum.TextXAlignment.Left
     promptTitle.ZIndex = 1001
     promptTitle.Parent = promptFrame
 
-    -- Kill Switch Button (X) to close the popup without saving
-    local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 32, 0, 32)
-    closeButton.Position = UDim2.new(1, -42, 0, 14)
-    closeButton.BackgroundColor3 = Color3.fromRGB(40, 10, 20)
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.Text = "X"
-    closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-    closeButton.TextSize = 16
-    closeButton.ZIndex = 1002
-    closeButton.Parent = promptFrame
+    local promptClose = Instance.new("TextButton")
+    promptClose.Size = UDim2.new(0, 32, 0, 32)
+    promptClose.Position = UDim2.new(1, -42, 0, 14)
+    promptClose.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
+    promptClose.Font = Enum.Font.Gotham
+    promptClose.Text = "X"
+    promptClose.TextColor3 = Color3.fromRGB(180, 185, 195)
+    promptClose.TextSize = 14
+    promptClose.ZIndex = 1002
+    promptClose.Parent = promptFrame
 
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 6)
-    closeCorner.Parent = closeButton
-
-    local closeStroke = Instance.new("UIStroke")
-    closeStroke.Color = Color3.fromRGB(255, 50, 50)
-    closeStroke.Thickness = 1.2
-    closeStroke.Parent = closeButton
+    local pcCorner = Instance.new("UICorner")
+    pcCorner.CornerRadius = UDim.new(0, 6)
+    pcCorner.Parent = promptClose
 
     local textBox = Instance.new("TextBox")
     textBox.Size = UDim2.new(0, 320, 0, 35)
     textBox.Position = UDim2.new(0.5, -160, 0, 60)
-    textBox.BackgroundColor3 = Color3.fromRGB(30, 35, 50)
+    textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
     textBox.Font = Enum.Font.Gotham
     textBox.PlaceholderText = "Paste webhook URL here..."
     textBox.Text = ""
-    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    textBox.PlaceholderColor3 = Color3.fromRGB(120, 130, 150)
+    textBox.TextColor3 = Color3.fromRGB(210, 215, 225)
+    textBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 140)
     textBox.TextSize = 13
     textBox.ClearTextOnFocus = false
     textBox.ZIndex = 1001
@@ -184,25 +373,20 @@ local function createWebhookPopup()
     boxCorner.CornerRadius = UDim.new(0, 6)
     boxCorner.Parent = textBox
 
-    local boxStroke = Instance.new("UIStroke")
-    boxStroke.Color = Color3.fromRGB(60, 75, 105)
-    boxStroke.Thickness = 1.2
-    boxStroke.Parent = textBox
-
     local submitButton = Instance.new("TextButton")
     submitButton.Size = UDim2.new(0, 320, 0, 35)
     submitButton.Position = UDim2.new(0.5, -160, 0, 108)
-    submitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    submitButton.Font = Enum.Font.GothamBold
+    submitButton.BackgroundColor3 = Color3.fromRGB(45, 52, 68)
+    submitButton.Font = Enum.Font.Gotham
     submitButton.Text = "Submit"
-    submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    submitButton.TextSize = 14
+    submitButton.TextColor3 = Color3.fromRGB(210, 215, 225)
+    submitButton.TextSize = 13
     submitButton.ZIndex = 1001
     submitButton.Parent = promptFrame
 
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = submitButton
+    local sbCorner = Instance.new("UICorner")
+    sbCorner.CornerRadius = UDim.new(0, 6)
+    sbCorner.Parent = submitButton
 
     submitButton.MouseButton1Click:Connect(function()
         local inputContent = textBox.Text
@@ -217,16 +401,17 @@ local function createWebhookPopup()
         end
     end)
 
-    -- Kill Switch click event to dismiss popup completely
-    closeButton.MouseButton1Click:Connect(function()
+    promptClose.MouseButton1Click:Connect(function()
         promptFrame:Destroy()
         blurOverlay:Destroy()
     end)
 end
 
--- Run popup check
 task.spawn(createWebhookPopup)
 
+-- ========================================================================
+-- AUTO RECONNECT & ERROR MONITORING LOGIC
+-- ========================================================================
 local hasSentWebhook = false
 
 local function triggerRejoin(reason)
@@ -237,8 +422,6 @@ local function triggerRejoin(reason)
         getgenv().JustReconnectedFlag = true
         sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
     end
-
-    print("[AutoRejoin] Rejoining triggered. Reason: " .. tostring(reason))
 
     while getgenv().AutoRejoinActive do
         pcall(function()
@@ -267,7 +450,6 @@ pcall(function()
     end)
 end)
 
--- Added server shutdown/restart message watcher
 pcall(function()
     ScriptContext.MessageOut:Connect(function(message, messageType)
         local lowerMsg = string.lower(message)
@@ -301,3 +483,5 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
         triggerRejoin("PlayerRemoving Event")
     end
 end)
+
+print("[Hennessy Hub] Redesigned UI loaded successfully!")

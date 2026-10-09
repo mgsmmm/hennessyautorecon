@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local GuiService = game:GetService("GuiService")
+local ScriptContext = game:GetService("ScriptContext")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally, otherwise default placeholder
@@ -234,10 +235,10 @@ local function triggerRejoin(reason)
     if not hasSentWebhook then
         hasSentWebhook = true
         getgenv().JustReconnectedFlag = true
-        sendWebhook("Disconnected", "Reconnecting...", 16711680)
+        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
     end
 
-    print("[AutoRejoin] Disconnection detected: " .. tostring(reason))
+    print("[AutoRejoin] Rejoining triggered. Reason: " .. tostring(reason))
 
     while getgenv().AutoRejoinActive do
         pcall(function()
@@ -266,6 +267,16 @@ pcall(function()
     end)
 end)
 
+-- Added server shutdown/restart message watcher
+pcall(function()
+    ScriptContext.MessageOut:Connect(function(message, messageType)
+        local lowerMsg = string.lower(message)
+        if lowerMsg:find("shutdown") or lowerMsg:find("server shutting down") or lowerMsg:find("restart") then
+            triggerRejoin("Server Shutdown Event Log: " .. message)
+        end
+    end)
+end)
+
 task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
@@ -275,7 +286,7 @@ task.spawn(function()
                 for _, descendant in ipairs(robloxGui:GetDescendants()) do
                     if descendant:IsA("TextLabel") and descendant.Visible then
                         local text = string.lower(descendant.Text)
-                        if text:find("disconnected") or text:find("lost connection") or text:find("reconnect") or text:find("error code") or text:find("shut down") then
+                        if text:find("disconnected") or text:find("lost connection") or text:find("reconnect") or text:find("error code") or text:find("shut down") or text:find("server restart") then
                             triggerRejoin("CoreGui Text Match: " .. descendant.Text)
                         end
                     end

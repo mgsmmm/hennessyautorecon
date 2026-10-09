@@ -7,7 +7,7 @@ local ScriptContext = game:GetService("ScriptContext")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally, otherwise default placeholder
-local WEBHOOK_URL = getgenv().WebhookUrl or "YOUR_DISCORD_WEBHOOK_URL_HERE"
+local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"
 
 local function sendWebhook(title, statusText, colorCode)
     if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then

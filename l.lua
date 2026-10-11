@@ -9,9 +9,8 @@ local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
-local CURRENT_VERSION = "v1.0.8"
+local CURRENT_VERSION = "v1.1.4"
 
--- Try-Catch-Finally wrapper helper
 local function executeWithTryCatchFinally(tryFunction, catchFunction, finallyFunction)
     local success, err = pcall(tryFunction)
     if not success and catchFunction then
@@ -22,10 +21,8 @@ local function executeWithTryCatchFinally(tryFunction, catchFunction, finallyFun
     end
 end
 
--- Main script execution wrapped securely
 executeWithTryCatchFinally(
     function()
-        -- Check if WebhookUrl is already set globally
         local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"
 
         local function sendWebhook(title, statusText, colorCode)
@@ -86,14 +83,17 @@ executeWithTryCatchFinally(
         screenGui.Parent = targetParent
 
         -- ========================================================================
-        -- FULL SCREEN COVER OVERLAY
+        -- FULL SCREEN COVER OVERLAY (Dynamic Blocking)
         -- ========================================================================
-        local fullScreenOverlay = Instance.new("Frame")
+        local fullScreenOverlay = Instance.new("TextButton")
         fullScreenOverlay.Name = "FullScreenOverlay"
         fullScreenOverlay.Size = UDim2.new(1, 0, 1, 0)
         fullScreenOverlay.Position = UDim2.new(0, 0, 0, 0)
         fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         fullScreenOverlay.BackgroundTransparency = 0
+        fullScreenOverlay.Text = ""
+        fullScreenOverlay.AutoButtonColor = false
+        fullScreenOverlay.Active = true
         fullScreenOverlay.ZIndex = 5
         fullScreenOverlay.Visible = true
         fullScreenOverlay.Parent = screenGui
@@ -177,7 +177,7 @@ executeWithTryCatchFinally(
             autoReconBtn.Text = getgenv().AutoRejoinActive and "  Auto Recon: On" or "  Auto Recon: Off"
         end)
 
-        -- 2. FPS Booster Button
+        -- 2. FPS Booster Button (Removes Textures, Decals, VFX, Particles, Shadows)
         local fpsBtn = Instance.new("TextButton")
         fpsBtn.Size = UDim2.new(0, 160, 0, 36)
         fpsBtn.Position = UDim2.new(0, 0, 0, 42)
@@ -200,15 +200,43 @@ executeWithTryCatchFinally(
         fpsStroke.Parent = fpsBtn
 
         local storedObjects = {}
+        local vfxConnections = {}
+
+        local function clearOptics(parent)
+            for _, v in ipairs(parent:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                    v.Enabled = false
+                    table.insert(storedObjects, v)
+                elseif v:IsA("Texture") or v:IsA("Decal") then
+                    v.Transparency = 1
+                    table.insert(storedObjects, v)
+                elseif v:IsA("BasePart") then
+                    v.Material = Enum.Material.SmoothPlastic
+                end
+            end
+        end
+
         local function applyBoost()
             pcall(function()
                 Lighting.GlobalShadows = false
                 for _, v in ipairs(Lighting:GetChildren()) do
-                    if v:IsA("Atmosphere") or v:IsA("Clouds") then
+                    if v:IsA("Atmosphere") or v:IsA("Clouds") or v:IsA("PostEffect") then
                         v.Enabled = false
                         table.insert(storedObjects, v)
                     end
                 end
+                clearOptics(Workspace)
+                
+                -- Auto-disable future spawned textures/VFX
+                table.insert(vfxConnections, Workspace.DescendantAdded:Connect(function(v)
+                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    elseif v:IsA("Texture") or v:IsA("Decal") then
+                        v.Transparency = 1
+                    elseif v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                    end
+                end))
             end)
         end
 
@@ -216,11 +244,19 @@ executeWithTryCatchFinally(
             pcall(function()
                 Lighting.GlobalShadows = true
             end)
+            for _, conn in ipairs(vfxConnections) do
+                pcall(function() conn:Disconnect() end)
+            end
+            vfxConnections = {}
             for _, obj in ipairs(storedObjects) do
                 if obj and obj.Parent then
-                    if obj:IsA("Atmosphere") or obj:IsA("Clouds") then
-                        obj.Enabled = true
-                    end
+                    pcall(function()
+                        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or obj:IsA("Fire") or obj:IsA("Smoke") or obj:IsA("Sparkles") or obj:IsA("Atmosphere") or obj:IsA("Clouds") or obj:IsA("PostEffect") then
+                            obj.Enabled = true
+                        elseif obj:IsA("Texture") or obj:IsA("Decal") then
+                            obj.Transparency = 0
+                        end
+                    end)
                 end
             end
             storedObjects = {}
@@ -403,14 +439,17 @@ executeWithTryCatchFinally(
             statLabels[cfg.id] = {label = lbl, exact = cfg.exact, display = cfg.display}
         end
 
+        -- Toggle Stat Tracker Visibility & Background Blocking State
         local statTrackerActive = true
         statTrackerBtn.MouseButton1Click:Connect(function()
             statTrackerActive = not statTrackerActive
             statFrame.Visible = statTrackerActive
             fullScreenOverlay.Visible = statTrackerActive
+            fullScreenOverlay.Active = statTrackerActive
             statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
         end)
 
+        -- Color Selection
         local function selectBlack()
             radioBlack.Text = "  (*) Black"
             radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
@@ -444,6 +483,7 @@ executeWithTryCatchFinally(
         radioBlack.MouseButton1Click:Connect(selectBlack)
         radioWhite.MouseButton1Click:Connect(selectWhite)
 
+        -- Draggable Center Panel
         local UIS = game:GetService("UserInputService")
         local stDragging, stDragStart, stStartPos, stDragInput
         statFrame.InputBegan:Connect(function(input)
@@ -472,6 +512,9 @@ executeWithTryCatchFinally(
             end
         end)
 
+        -- ========================================================================
+        -- TARGETED REAL-TIME STAT SCANNER LOOP
+        -- ========================================================================
         local suffixes = {
             {s = "no", m = 1e30},
             {s = "oc", m = 1e27},
@@ -551,6 +594,7 @@ executeWithTryCatchFinally(
                     for statId, item in pairs(statLabels) do
                         local detectedVal = nil
 
+                        -- Priority 1: Check Leaderstats
                         if leaderstats then
                             for _, child in ipairs(leaderstats:GetChildren()) do
                                 if matchesExact(child.Name, item.exact) then
@@ -560,6 +604,7 @@ executeWithTryCatchFinally(
                             end
                         end
 
+                        -- Priority 2: Check Player attributes
                         if detectedVal == nil then
                             local attributes = player:GetAttributes()
                             for attrName, attrVal in pairs(attributes) do
@@ -570,6 +615,7 @@ executeWithTryCatchFinally(
                             end
                         end
 
+                        -- Priority 3: Scan LocalPlayer inner descendants & Inventory Folders
                         if detectedVal == nil then
                             local playerRoots = {
                                 player:FindFirstChild("Data"),
@@ -606,6 +652,7 @@ executeWithTryCatchFinally(
                             end
                         end
 
+                        -- Update UI Label
                         if detectedVal ~= nil then
                             local parsed = parseStatValue(detectedVal)
                             if type(parsed) == "number" then
@@ -621,6 +668,9 @@ executeWithTryCatchFinally(
             end
         end)
 
+        -- ========================================================================
+        -- UNDETECTABLE MOBILE ANTI-AFK
+        -- ========================================================================
         local function sendTouchPing()
             pcall(function()
                 VirtualInputManager:SendTouchEvent(1, 0, 0, 0)
@@ -640,6 +690,9 @@ executeWithTryCatchFinally(
             end
         end)
 
+        -- ========================================================================
+        -- DRAGGABLE TOP MENU LOGIC & KILL SWITCH
+        -- ========================================================================
         local dragging, dragInput, dragStart, startPos
         local hasMoved = false
 
@@ -682,12 +735,15 @@ executeWithTryCatchFinally(
             dropdownContainer.Visible = not dropdownContainer.Visible
         end)
 
-closeButton.MouseButton1Click:Connect(function()
+        closeButton.MouseButton1Click:Connect(function()
             getgenv().AutoRejoinActive = false
             restoreOriginal()
             screenGui:Destroy()
         end)
 
+        -- ========================================================================
+        -- WEBHOOK POPUP PROMPT
+        -- ========================================================================
         local function createWebhookPopup()
             if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
                 return
@@ -799,6 +855,9 @@ closeButton.MouseButton1Click:Connect(function()
 
         task.spawn(createWebhookPopup)
 
+        -- ========================================================================
+        -- AUTO RECONNECT & ERROR MONITORING
+        -- ========================================================================
         local hasSentWebhook = false
 
         local function triggerRejoin(reason)
@@ -872,11 +931,9 @@ closeButton.MouseButton1Click:Connect(function()
         end)
     end,
     function(errorMsg)
-        -- Catch block (executes if an error happens)
         warn("[Hennessy Hub Error Log]: " .. tostring(errorMsg))
     end,
     function(isSuccess, errorMsg)
-        -- Finally block (always executes regardless of success or failure)
         print("--------------------------------------------------")
         if isSuccess then
             print("[Status]: Script executed successfully!")

@@ -368,8 +368,8 @@ local statConfig = {
     {id = "vip_key", keywords = {"vip key", "vipkey", "full key"}, display = "VIP key"},
     {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper half", "upperkey", "top half", "upper"}, display = "VIP upper half"},
     {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower half", "lowerkey", "bottom half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, isEgg = true, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, isEgg = true, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -385,7 +385,7 @@ for i, cfg in ipairs(statConfig) do
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
+    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display, isEgg = cfg.isEgg}
 end
 
 -- Toggle Stat Tracker Visibility & Background Overlay
@@ -461,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED PET UNIVERSE REAL-TIME STAT & ITEM SCANNER
+-- ADVANCED PET UNIVERSE SCANNER (CURRENCY + EGG QUANTITY FIX)
 -- ========================================================================
 local function formatNumber(n)
     if type(n) ~= "number" then return tostring(n) end
@@ -484,53 +484,35 @@ task.spawn(function()
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
                 player:FindFirstChild("Inventory"),
+                player:FindFirstChild("Eggs"),
                 player:FindFirstChild("Keys"),
                 player:FindFirstChild("Values"),
-                player:FindFirstChild("PlayerGui"),
                 player
             }
 
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
-                local instanceCount = 0
+                local eggCount = 0
 
-                -- 1. Check Player Attributes
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
-                            detectedVal = attrVal
-                            break
-                        end
-                    end
-                    if detectedVal then break end
-                end
-
-                -- 2. Deep Search across Data, Inventories, and Folders
-                if not detectedVal then
+                -- Special Logic for Eggs (Count Item Instances instead of Reading Boolean Flags)
+                if item.isEgg then
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") and not descendant:IsA("GuiObject") then
-                                    local lowerName = string.lower(descendant.Name)
-                                    for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw or (lowerName:find(kw) and (lowerName:find("key") or lowerName:find("half") or lowerName:find("egg") or lowerName:find("vip") or lowerName:find("item"))) then
-                                            if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                                local num = tonumber(descendant.Value)
-                                                if num then
-                                                    detectedVal = num
-                                                    break
-                                                else
-                                                    detectedVal = descendant.Value
-                                                    break
-                                                end
-                                            elseif descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value") then
-                                                detectedVal = descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value")
-                                                break
-                                            else
-                                                instanceCount = instanceCount + 1
-                                            end
+                                local lowerName = string.lower(descendant.Name)
+                                for _, kw in ipairs(item.keywords) do
+                                    if lowerName:find(kw) then
+                                        -- If it's a numeric value or quantity attribute, use it
+                                        local amountAttr = descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Quantity")
+                                        if amountAttr and tonumber(amountAttr) then
+                                            detectedVal = tonumber(amountAttr)
+                                            break
+                                        elseif descendant:IsA("ValueBase") and tonumber(descendant.Value) and type(descendant.Value) == "number" then
+                                            detectedVal = descendant.Value
+                                            break
+                                        else
+                                            -- Count physical inventory item objects
+                                            eggCount = eggCount + 1
                                         end
                                     end
                                 end
@@ -539,13 +521,78 @@ task.spawn(function()
                         end
                         if detectedVal then break end
                     end
+
+                    if detectedVal == nil then
+                        detectedVal = eggCount
+                    end
+                else
+                    -- Standard Currency & Keys Logic
+                    -- 1. Search attributes
+                    local attributes = player:GetAttributes()
+                    for attrName, attrVal in pairs(attributes) do
+                        local lowerAttr = string.lower(attrName)
+                        for _, kw in ipairs(item.keywords) do
+                            if lowerAttr == kw or lowerAttr:find(kw) then
+                                if type(attrVal) == "number" or tonumber(attrVal) then
+                                    detectedVal = tonumber(attrVal)
+                                    break
+                                end
+                            end
+                        end
+                        if detectedVal then break end
+                    end
+
+                    -- 2. Search values across data roots
+                    if not detectedVal then
+                        for _, root in ipairs(searchRoots) do
+                            if root then
+                                for _, descendant in ipairs(root:GetDescendants()) do
+                                    if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") then
+                                        local lowerName = string.lower(descendant.Name)
+                                        for _, kw in ipairs(item.keywords) do
+                                            if lowerName == kw or (lowerName:find(kw) and (lowerName:find("key") or lowerName:find("half") or lowerName:find("vip") or lowerName:find("coin") or lowerName:find("gem") or lowerName:find("ruby"))) then
+                                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                                    local num = tonumber(descendant.Value)
+                                                    if num then
+                                                        detectedVal = num
+                                                        break
+                                                    end
+                                                end
+                                            end
+                                        end
+                                    end
+                                    if detectedVal then break end
+                                end
+                            end
+                            if detectedVal then break end
+                        end
+                    end
+
+                    -- 3. Screen HUD UI Parsing (Backup for Currencies displayed on Screen UI)
+                    if not detectedVal then
+                        local pGui = player:FindFirstChild("PlayerGui")
+                        if pGui then
+                            for _, guiElem in ipairs(pGui:GetDescendants()) do
+                                if guiElem:IsA("TextLabel") and guiElem.Visible and guiElem.Parent and guiElem.Parent.Name ~= "HennessyHubGUI" then
+                                    local lowerName = string.lower(guiElem.Name .. " " .. guiElem.Parent.Name)
+                                    for _, kw in ipairs(item.keywords) do
+                                        if lowerName:find(kw) then
+                                            local cleanText = string.gsub(guiElem.Text, "[^0-9.]", "")
+                                            local parsedNum = tonumber(cleanText)
+                                            if parsedNum then
+                                                detectedVal = parsedNum
+                                                break
+                                            end
+                                        end
+                                    end
+                                end
+                                if detectedVal then break end
+                            end
+                        end
+                    end
                 end
 
-                if detectedVal == nil and instanceCount > 0 then
-                    detectedVal = instanceCount
-                end
-
-                -- 3. Update Label UI
+                -- Display Result
                 if detectedVal ~= nil then
                     if type(detectedVal) == "number" then
                         item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))

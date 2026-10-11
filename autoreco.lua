@@ -247,7 +247,7 @@ stStroke.Color = Color3.fromRGB(55, 62, 80)
 stStroke.Thickness = 1.5
 stStroke.Parent = statTrackerBtn
 
--- 4. Background (*) Dropdown
+-- 4. Background (*) Dropdown Button
 local bgMenuBtn = Instance.new("TextButton")
 bgMenuBtn.Size = UDim2.new(0, 160, 0, 36)
 bgMenuBtn.Position = UDim2.new(0, 0, 0, 126)
@@ -361,16 +361,15 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
--- Updated Stat Config with comprehensive Key / Key Half patterns
 local statConfig = {
     {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
     {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey", "full key", "completed key"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper half", "top half", "upperkey", "topkey", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower half", "bottom half", "lowerkey", "bottomkey", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "vip_key", keywords = {"vip key", "vip_key", "vipkey"}, display = "VIP key"},
+    {id = "vip_upper", keywords = {"vip upper", "vip_upper", "upper half", "upperkey", "keyupper"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower", "vip_lower", "lower half", "lowerkey", "keylower"}, display = "VIP lower half"},
+    {id = "party_eggs", keywords = {"party egg", "party_egg", "partyegg"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien_egg", "alienegg"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -398,7 +397,7 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
 end)
 
--- Theme Color Picker
+-- Theme Selection Logic
 local function selectBlack()
     radioBlack.Text = "  (*) Black"
     radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
@@ -462,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- DUAL-MODE SCANNER (Item-Counting + Value-Reading)
+-- ADVANCED REAL-TIME STAT SCANNER LOOP
 -- ========================================================================
 local function formatNumber(n)
     if type(n) ~= "number" then return tostring(n) end
@@ -484,24 +483,23 @@ task.spawn(function()
                 player:FindFirstChild("Data"),
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
-                player:FindFirstChild("Values"),
                 player:FindFirstChild("Inventory"),
-                player:FindFirstChild("Items"),
-                player:FindFirstChild("Backpack"),
+                player:FindFirstChild("Keys"),
+                player:FindFirstChild("Values"),
                 player:FindFirstChild("PlayerGui"),
                 player
             }
 
-            for statId, item in pairs(statLabels) do
+            for _, cfg in ipairs(statConfig) do
+                local item = statLabels[cfg.id]
                 local detectedVal = nil
-                local instanceCount = 0
 
-                -- 1. Scan Player Attributes
+                -- 1. Scan Player Attributes First
                 local attributes = player:GetAttributes()
                 for attrName, attrVal in pairs(attributes) do
                     local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
+                    for _, kw in ipairs(cfg.keywords) do
+                        if lowerAttr == kw or (lowerAttr:find(kw) and not lowerAttr:find("mesh") and not lowerAttr:find("body")) then
                             detectedVal = attrVal
                             break
                         end
@@ -509,51 +507,39 @@ task.spawn(function()
                     if detectedVal then break end
                 end
 
-                -- 2. Scan Inventory Trees (Value-reading + Item Counting)
+                -- 2. Deep Search in Data / Inventory Trees
                 if not detectedVal then
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                local lowerName = string.lower(descendant.Name)
-                                local matches = false
-                                for _, kw in ipairs(item.keywords) do
-                                    if lowerName == kw or lowerName:find(kw) then
-                                        matches = true
-                                        break
-                                    end
-                                end
-
-                                if matches then
-                                    -- Check if it's a numeric Value container
-                                    if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                        local num = tonumber(descendant.Value)
-                                        if num then
-                                            detectedVal = num
+                                if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") and not descendant:IsA("GuiObject") then
+                                    local lowerName = string.lower(descendant.Name)
+                                    
+                                    for _, kw in ipairs(cfg.keywords) do
+                                        if lowerName == kw or (lowerName:find(kw) and (lowerName:find("key") or lowerName:find("vip") or lowerName:find("half") or lowerName:find("item"))) then
+                                            if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                                detectedVal = descendant.Value
+                                            elseif descendant:IsA("Folder") or descendant:IsA("Configuration") then
+                                                detectedVal = #descendant:GetChildren()
+                                            end
                                             break
                                         end
-                                    -- Check if it has stack attributes
-                                    elseif descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value") then
-                                        detectedVal = descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value")
-                                        break
-                                    -- Count instances if items are individual objects
-                                    else
-                                        instanceCount = instanceCount + 1
                                     end
                                 end
+                                if detectedVal then break end
                             end
                         end
                         if detectedVal then break end
                     end
                 end
 
-                -- Fallback to Instance Count if no explicit numeric value was found
-                if detectedVal == nil and instanceCount > 0 then
-                    detectedVal = instanceCount
-                end
-
-                -- 3. Render UI Label
+                -- 3. Update Label Text
                 if detectedVal ~= nil then
-                    item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
+                    if type(detectedVal) == "number" then
+                        item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
+                    else
+                        item.label.Text = string.format("%s: %s", item.display, tostring(detectedVal))
+                    end
                 else
                     item.label.Text = string.format("%s: 0", item.display)
                 end
@@ -710,119 +696,119 @@ local function createWebhookPopup()
     textBox.ZIndex = 1001
     textBox.Parent = promptFrame
 
-    localThe issue with `VIP upper half` and `VIP lower half` displaying **0** comes down to how **Pet Universe** names and structures key items in player data.
+    local boxCorner = Instance.new("UICorner")
+    boxCorner.CornerRadius = UDim.new(0, 6)
+    boxCorner.Parent = textBox
 
-When the scanner searches for `"upper"` or `"lower"`, it is either:
-1. Matching a different string in the player data before finding the actual item (such as character mesh parts or clothing instances).
-2. Missing key items because they are stored inside a **Folder** or **Dictionary** as item counts (e.g., `Keys["VIP Upper"]` or `Inventory["VIP Key Half (Upper)"]`).
+    local submitButton = Instance.new("TextButton")
+    submitButton.Size = UDim2.new(0, 320, 0, 35)
+    submitButton.Position = UDim2.new(0.5, -160, 0, 108)
+    submitButton.BackgroundColor3 = Color3.fromRGB(45, 52, 68)
+    submitButton.Font = Enum.Font.Gotham
+    submitButton.Text = "Submit"
+    submitButton.TextColor3 = Color3.fromRGB(210, 215, 225)
+    submitButton.TextSize = 13
+    submitButton.ZIndex = 1001
+    submitButton.Parent = promptFrame
 
----
+    local sbCorner = Instance.new("UICorner")
+    sbCorner.CornerRadius = UDim.new(0, 6)
+    sbCorner.Parent = submitButton
 
-### Universal Real-Time Fix for Keys & Items
+    submitButton.MouseButton1Click:Connect(function()
+        local inputContent = textBox.Text
+        if inputContent and inputContent ~= "" then
+            WEBHOOK_URL = inputContent
+            getgenv().WebhookUrl = inputContent
+            promptFrame:Destroy()
+            blurOverlay:Destroy()
+            sendWebhook("Webhook Connected", "Successfully linked webhook to script!", 65280)
+        else
+            textBox.PlaceholderText = "Please enter a valid URL!"
+        end
+    end)
 
-Below is an updated stat reader thread that specifically targets keys, key fragments, inventory items, and nested key folders.
-
-Replace the **`ADVANCED REAL-TIME STAT SCANNER LOOP`** block in your script with this updated version:
-
-```lua
--- ========================================================================
--- ENHANCED REAL-TIME STAT SCANNER (PET UNIVERSE KEY FIX)
--- ========================================================================
-local function formatNumber(n)
-    if type(n) ~= "number" then return tostring(n) end
-    local formatted = tostring(math.floor(n))
-    local k
-    while true do
-        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-        if k == 0 then break end
-    end
-    return formatted
+    promptClose.MouseButton1Click:Connect(function()
+        promptFrame:Destroy()
+        blurOverlay:Destroy()
+    end)
 end
 
-local statConfig = {
-    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
-    {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
-    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vip_key", "vipkey"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip_upper", "upper half", "upperkey", "keyupper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip_lower", "lower half", "lowerkey", "keylower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party_egg", "partyegg"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien_egg", "alienegg"}, display = "alien eggs"}
-}
+task.spawn(createWebhookPopup)
+
+-- ========================================================================
+-- AUTO RECONNECT & ERROR MONITORING
+-- ========================================================================
+local hasSentWebhook = false
+
+local function triggerRejoin(reason)
+    if not getgenv().AutoRejoinActive then return end
+    
+    if not hasSentWebhook then
+        hasSentWebhook = true
+        getgenv().JustReconnectedFlag = true
+        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
+    end
+
+    while getgenv().AutoRejoinActive do
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+        end)
+        task.wait(2)
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, player)
+        end)
+        task.wait(4)
+    end
+end
+
+TeleportService.TeleportInitFailed:Connect(function(targetPlayer, _, errorMessage)
+    if targetPlayer == player then
+        triggerRejoin("TeleportInitFailed: " .. tostring(errorMessage))
+    end
+end)
+
+pcall(function()
+    GuiService.ErrorMessageChanged:Connect(function()
+        local err = GuiService:GetErrorMessage()
+        if err and err ~= "" then
+            triggerRejoin("GuiService Error: " .. err)
+        end
+    end)
+end)
+
+pcall(function()
+    ScriptContext.MessageOut:Connect(function(message, messageType)
+        local lowerMsg = string.lower(message)
+        if lowerMsg:find("shutdown") or lowerMsg:find("server shutting down") or lowerMsg:find("restart") then
+            triggerRejoin("Server Shutdown Event Log: " .. message)
+        end
+    end)
+end)
 
 task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            local searchRoots = {
-                player:FindFirstChild("leaderstats"),
-                player:FindFirstChild("Data"),
-                player:FindFirstChild("Stats"),
-                player:FindFirstChild("Currency"),
-                player:FindFirstChild("Inventory"),
-                player:FindFirstChild("Keys"),
-                player:FindFirstChild("Values"),
-                player:FindFirstChild("PlayerGui"),
-                player
-            }
-
-            for _, cfg in ipairs(statConfig) do
-                local item = statLabels[cfg.id]
-                local detectedVal = nil
-
-                -- 1. Scan Player Attributes First
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(cfg.keywords) do
-                        if lowerAttr == kw or (lowerAttr:find(kw) and not lowerAttr:find("mesh") and not lowerAttr:find("body")) then
-                            detectedVal = attrVal
-                            break
+            local robloxGui = CoreGui:FindFirstChild("RobloxGui")
+            if robloxGui then
+                for _, descendant in ipairs(robloxGui:GetDescendants()) do
+                    if descendant:IsA("TextLabel") and descendant.Visible then
+                        local text = string.lower(descendant.Text)
+                        if text:find("disconnected") or text:find("lost connection") or text:find("reconnect") or text:find("error code") or text:find("shut down") or text:find("server restart") then
+                            triggerRejoin("CoreGui Text Match: " .. descendant.Text)
                         end
                     end
-                    if detectedVal then break end
-                end
-
-                -- 2. Deep Search in Data / Inventory Trees
-                if not detectedVal then
-                    for _, root in ipairs(searchRoots) do
-                        if root then
-                            for _, descendant in ipairs(root:GetDescendants()) do
-                                -- Ignore Roblox Character Parts or GUI Elements to prevent false matches
-                                local className = descendant.ClassName
-                                if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") and not descendant:IsA("GuiObject") then
-                                    local lowerName = string.lower(descendant.Name)
-                                    
-                                    for _, kw in ipairs(cfg.keywords) do
-                                        if lowerName == kw or (lowerName:find(kw) and (lowerName:find("key") or lowerName:find("vip") or lowerName:find("half") or lowerName:find("item"))) then
-                                            if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                                detectedVal = descendant.Value
-                                            elseif descendant:IsA("Folder") or descendant:IsA("Configuration") then
-                                                -- Count instances inside a folder if items are represented as individual objects
-                                                detectedVal = #descendant:GetChildren()
-                                            end
-                                            break
-                                        end
-                                    end
-                                end
-                                if detectedVal then break end
-                            end
-                        end
-                        if detectedVal then break end
-                    end
-                end
-
-                -- 3. Update Label Text
-                if detectedVal ~= nil then
-                    if type(detectedVal) == "number" then
-                        item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
-                    else
-                        item.label.Text = string.format("%s: %s", item.display, tostring(detectedVal))
-                    end
-                else
-                    item.label.Text = string.format("%s: 0", item.display)
                 end
             end
         end)
     end
 end)
+
+Players.PlayerRemoving:Connect(function(leavingPlayer)
+    if leavingPlayer == player then
+        triggerRejoin("PlayerRemoving Event")
+    end
+end)
+
+print("[Hennessy Hub] Script loaded with 0 syntax errors!")

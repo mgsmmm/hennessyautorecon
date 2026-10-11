@@ -508,9 +508,8 @@ local function formatNumber(n)
     for _, suf in ipairs(suffixes) do
         if n >= suf.m then
             local reduced = n / suf.m
-            -- Format with up to 1 decimal place if needed (e.g. 5.4m)
-            local formattedNum = string.format(reduced % 1 == 0 and "%.0f%s" :gsub("%%0f", "%%d") or "%.1f%s", reduced, suf.s)
-            return formattedNum
+            local formatStr = reduced % 1 == 0 and "%.0f%s" or "%.1f%s"
+            return string.format(formatStr, reduced, suf.s)
         end
     end
     
@@ -868,4 +867,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.4")
+print("v1.0.5")

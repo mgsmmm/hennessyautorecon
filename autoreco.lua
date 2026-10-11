@@ -247,7 +247,7 @@ stStroke.Color = Color3.fromRGB(55, 62, 80)
 stStroke.Thickness = 1.5
 stStroke.Parent = statTrackerBtn
 
--- 4. Background (*) Radio Dropdown Main Button
+-- 4. Background (*) Dropdown
 local bgMenuBtn = Instance.new("TextButton")
 bgMenuBtn.Size = UDim2.new(0, 160, 0, 36)
 bgMenuBtn.Position = UDim2.new(0, 0, 0, 126)
@@ -269,7 +269,6 @@ bgStroke.Color = Color3.fromRGB(55, 62, 80)
 bgStroke.Thickness = 1.5
 bgStroke.Parent = bgMenuBtn
 
--- Background Radio Options Container
 local radioContainer = Instance.new("Frame")
 radioContainer.Size = UDim2.new(0, 150, 0, 68)
 radioContainer.Position = UDim2.new(0, 5, 0, 166)
@@ -287,7 +286,6 @@ rcStroke.Color = Color3.fromRGB(45, 50, 65)
 rcStroke.Thickness = 1
 rcStroke.Parent = radioContainer
 
--- Radio Option 1: White
 local radioWhite = Instance.new("TextButton")
 radioWhite.Size = UDim2.new(1, -10, 0, 28)
 radioWhite.Position = UDim2.new(0, 5, 0, 4)
@@ -300,14 +298,13 @@ radioWhite.TextXAlignment = Enum.TextXAlignment.Left
 radioWhite.ZIndex = 108
 radioWhite.Parent = radioContainer
 
--- Radio Option 2: Black (Default Active)
 local radioBlack = Instance.new("TextButton")
 radioBlack.Size = UDim2.new(1, -10, 0, 28)
 radioBlack.Position = UDim2.new(0, 5, 0, 34)
 radioBlack.BackgroundTransparency = 1
 radioBlack.Font = Enum.Font.Gotham
 radioBlack.Text = "  (*) Black"
-radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120) -- Highlight Active
+radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
 radioBlack.TextSize = 11
 radioBlack.TextXAlignment = Enum.TextXAlignment.Left
 radioBlack.ZIndex = 108
@@ -365,14 +362,14 @@ gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
 local statConfig = {
-    {key = "coins", display = "coins"},
-    {key = "rubies", display = "rubies"},
-    {key = "gems", display = "gems"},
-    {key = "vip key", display = "VIP key"},
-    {key = "vip upper", display = "VIP upper half"},
-    {key = "vip lower", display = "VIP lower half"},
-    {key = "party eggs", display = "party eggs"},
-    {key = "alien eggs", display = "alien eggs"}
+    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
+    {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
+    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
+    {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
+    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
+    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -388,7 +385,7 @@ for i, cfg in ipairs(statConfig) do
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[cfg.key] = {label = lbl, display = cfg.display}
+    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
 end
 
 -- Toggle Stat Tracker Visibility & Background Overlay
@@ -400,7 +397,7 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
 end)
 
--- Radio Button Color Selection Logic
+-- Color Selection
 local function selectBlack()
     radioBlack.Text = "  (*) Black"
     radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
@@ -434,7 +431,7 @@ end
 radioBlack.MouseButton1Click:Connect(selectBlack)
 radioWhite.MouseButton1Click:Connect(selectWhite)
 
--- Make Center Panel Draggable
+-- Draggable Center Panel
 local UIS = game:GetService("UserInputService")
 local stDragging, stDragStart, stStartPos, stDragInput
 statFrame.InputBegan:Connect(function(input)
@@ -463,37 +460,79 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Pet Universe Targeted Stat Reader Loop
+-- ========================================================================
+-- ADVANCED REAL-TIME STAT SCANNER LOOP
+-- ========================================================================
+local function formatNumber(n)
+    if type(n) ~= "number" then return tostring(n) end
+    local formatted = tostring(math.floor(n))
+    local k
+    while true do
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if k == 0 then break end
+    end
+    return formatted
+end
+
 task.spawn(function()
     while screenGui.Parent do
-        task.wait(0.5)
+        task.wait(0.3)
         pcall(function()
-            local searchContainers = {
+            -- Roots to aggressively scan
+            local searchRoots = {
                 player:FindFirstChild("leaderstats"),
                 player:FindFirstChild("Data"),
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
+                player:FindFirstChild("Values"),
+                player:FindFirstChild("PlayerGui"),
                 player
             }
 
-            for searchKey, item in pairs(statLabels) do
-                local foundValue = nil
-                for _, container in ipairs(searchContainers) do
-                    if container then
-                        for _, child in ipairs(container:GetDescendants()) do
-                            if string.lower(child.Name):find(searchKey) then
-                                if child:IsA("ValueBase") or child:IsA("StringValue") then
-                                    foundValue = child.Value
-                                    break
-                                end
-                            end
+            for statId, item in pairs(statLabels) do
+                local detectedVal = nil
+
+                -- 1. Check Attributes on LocalPlayer
+                local attributes = player:GetAttributes()
+                for attrName, attrVal in pairs(attributes) do
+                    local lowerAttr = string.lower(attrName)
+                    for _, kw in ipairs(item.keywords) do
+                        if lowerAttr == kw or lowerAttr:find(kw) then
+                            detectedVal = attrVal
+                            break
                         end
                     end
-                    if foundValue then break end
+                    if detectedVal then break end
                 end
 
-                if foundValue ~= nil then
-                    item.label.Text = string.format("%s: %s", item.display, tostring(foundValue))
+                -- 2. Scan through all ValueBase instances deep in trees
+                if not detectedVal then
+                    for _, root in ipairs(searchRoots) do
+                        if root then
+                            for _, descendant in ipairs(root:GetDescendants()) do
+                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                    local lowerName = string.lower(descendant.Name)
+                                    for _, kw in ipairs(item.keywords) do
+                                        if lowerName == kw or lowerName:find(kw) then
+                                            detectedVal = descendant.Value
+                                            break
+                                        end
+                                    end
+                                end
+                                if detectedVal then break end
+                            end
+                        end
+                        if detectedVal then break end
+                    end
+                end
+
+                -- 3. Update Label UI
+                if detectedVal ~= nil then
+                    if type(detectedVal) == "number" then
+                        item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
+                    else
+                        item.label.Text = string.format("%s: %s", item.display, tostring(detectedVal))
+                    end
                 else
                     item.label.Text = string.format("%s: 0", item.display)
                 end
@@ -765,4 +804,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("[Hennessy Hub] Background Dropdown Radio UI Updated Successfully!")
+print("[Hennessy Hub] Real-Time Multi-Target Stat Scanner Running!")

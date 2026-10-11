@@ -247,32 +247,32 @@ stStroke.Color = Color3.fromRGB(55, 62, 80)
 stStroke.Thickness = 1.5
 stStroke.Parent = statTrackerBtn
 
--- 4. Background Color Menu Toggle (Expands Radio Buttons)
-local colorMenuBtn = Instance.new("TextButton")
-colorMenuBtn.Size = UDim2.new(0, 160, 0, 36)
-colorMenuBtn.Position = UDim2.new(0, 0, 0, 126)
-colorMenuBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
-colorMenuBtn.Font = Enum.Font.Gotham
-colorMenuBtn.Text = "  Background Color v"
-colorMenuBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
-colorMenuBtn.TextSize = 12
-colorMenuBtn.TextXAlignment = Enum.TextXAlignment.Left
-colorMenuBtn.ZIndex = 106
-colorMenuBtn.Parent = dropdownContainer
+-- 4. Background (*) Radio Dropdown Main Button
+local bgMenuBtn = Instance.new("TextButton")
+bgMenuBtn.Size = UDim2.new(0, 160, 0, 36)
+bgMenuBtn.Position = UDim2.new(0, 0, 0, 126)
+bgMenuBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+bgMenuBtn.Font = Enum.Font.Gotham
+bgMenuBtn.Text = "  Background (*)"
+bgMenuBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
+bgMenuBtn.TextSize = 12
+bgMenuBtn.TextXAlignment = Enum.TextXAlignment.Left
+bgMenuBtn.ZIndex = 106
+bgMenuBtn.Parent = dropdownContainer
 
-local cmCorner = Instance.new("UICorner")
-cmCorner.CornerRadius = UDim.new(0, 8)
-cmCorner.Parent = colorMenuBtn
+local bgCorner = Instance.new("UICorner")
+bgCorner.CornerRadius = UDim.new(0, 8)
+bgCorner.Parent = bgMenuBtn
 
-local cmStroke = Instance.new("UIStroke")
-cmStroke.Color = Color3.fromRGB(55, 62, 80)
-cmStroke.Thickness = 1.5
-cmStroke.Parent = colorMenuBtn
+local bgStroke = Instance.new("UIStroke")
+bgStroke.Color = Color3.fromRGB(55, 62, 80)
+bgStroke.Thickness = 1.5
+bgStroke.Parent = bgMenuBtn
 
--- Radio Button Sub-Container
+-- Background Radio Options Container
 local radioContainer = Instance.new("Frame")
-radioContainer.Size = UDim2.new(0, 150, 0, 72)
-radioContainer.Position = UDim2.new(0, 5, 0, 168)
+radioContainer.Size = UDim2.new(0, 150, 0, 68)
+radioContainer.Position = UDim2.new(0, 5, 0, 166)
 radioContainer.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
 radioContainer.Visible = false
 radioContainer.ZIndex = 107
@@ -287,23 +287,10 @@ rcStroke.Color = Color3.fromRGB(45, 50, 65)
 rcStroke.Thickness = 1
 rcStroke.Parent = radioContainer
 
--- Radio Option 1: Black
-local radioBlack = Instance.new("TextButton")
-radioBlack.Size = UDim2.new(1, -10, 0, 30)
-radioBlack.Position = UDim2.new(0, 5, 0, 4)
-radioBlack.BackgroundTransparency = 1
-radioBlack.Font = Enum.Font.Gotham
-radioBlack.Text = "  (*) Black (Default)"
-radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120) -- Active highlight color
-radioBlack.TextSize = 11
-radioBlack.TextXAlignment = Enum.TextXAlignment.Left
-radioBlack.ZIndex = 108
-radioBlack.Parent = radioContainer
-
--- Radio Option 2: White
+-- Radio Option 1: White
 local radioWhite = Instance.new("TextButton")
-radioWhite.Size = UDim2.new(1, -10, 0, 30)
-radioWhite.Position = UDim2.new(0, 5, 0, 36)
+radioWhite.Size = UDim2.new(1, -10, 0, 28)
+radioWhite.Position = UDim2.new(0, 5, 0, 4)
 radioWhite.BackgroundTransparency = 1
 radioWhite.Font = Enum.Font.Gotham
 radioWhite.Text = "  ( ) White"
@@ -313,7 +300,20 @@ radioWhite.TextXAlignment = Enum.TextXAlignment.Left
 radioWhite.ZIndex = 108
 radioWhite.Parent = radioContainer
 
-colorMenuBtn.MouseButton1Click:Connect(function()
+-- Radio Option 2: Black (Default Active)
+local radioBlack = Instance.new("TextButton")
+radioBlack.Size = UDim2.new(1, -10, 0, 28)
+radioBlack.Position = UDim2.new(0, 5, 0, 34)
+radioBlack.BackgroundTransparency = 1
+radioBlack.Font = Enum.Font.Gotham
+radioBlack.Text = "  (*) Black"
+radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120) -- Highlight Active
+radioBlack.TextSize = 11
+radioBlack.TextXAlignment = Enum.TextXAlignment.Left
+radioBlack.ZIndex = 108
+radioBlack.Parent = radioContainer
+
+bgMenuBtn.MouseButton1Click:Connect(function()
     radioContainer.Visible = not radioContainer.Visible
 end)
 
@@ -364,7 +364,6 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
--- Updated Stat Keys matching user request
 local statConfig = {
     {key = "coins", display = "coins"},
     {key = "rubies", display = "rubies"},
@@ -401,9 +400,9 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
 end)
 
--- Radio Button Theme Switcher Logic (Black vs White)
-local function setBlackTheme()
-    radioBlack.Text = "  (*) Black (Default)"
+-- Radio Button Color Selection Logic
+local function selectBlack()
+    radioBlack.Text = "  (*) Black"
     radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
     radioWhite.Text = "  ( ) White"
     radioWhite.TextColor3 = Color3.fromRGB(180, 185, 195)
@@ -417,10 +416,10 @@ local function setBlackTheme()
     end
 end
 
-local function setWhiteTheme()
+local function selectWhite()
     radioWhite.Text = "  (*) White"
     radioWhite.TextColor3 = Color3.fromRGB(100, 225, 120)
-    radioBlack.Text = "  ( ) Black (Default)"
+    radioBlack.Text = "  ( ) Black"
     radioBlack.TextColor3 = Color3.fromRGB(180, 185, 195)
     
     fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -432,8 +431,8 @@ local function setWhiteTheme()
     end
 end
 
-radioBlack.MouseButton1Click:Connect(setBlackTheme)
-radioWhite.MouseButton1Click:Connect(setWhiteTheme)
+radioBlack.MouseButton1Click:Connect(selectBlack)
+radioWhite.MouseButton1Click:Connect(selectWhite)
 
 -- Make Center Panel Draggable
 local UIS = game:GetService("UserInputService")
@@ -766,4 +765,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("[Hennessy Hub] Radio Button Theme Selector & VIP Key Labels Loaded Successfully!")
+print("[Hennessy Hub] Background Dropdown Radio UI Updated Successfully!")

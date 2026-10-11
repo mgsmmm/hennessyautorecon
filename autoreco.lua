@@ -70,7 +70,7 @@ screenGui.DisplayOrder = 2147483647
 screenGui.Parent = targetParent
 
 -- ========================================================================
--- FULL SCREEN COVER OVERLAY (BLACK / WHITE THEME)
+-- FULL SCREEN COVER OVERLAY
 -- ========================================================================
 local fullScreenOverlay = Instance.new("Frame")
 fullScreenOverlay.Name = "FullScreenOverlay"
@@ -83,7 +83,7 @@ fullScreenOverlay.Visible = true
 fullScreenOverlay.Parent = screenGui
 
 -- ========================================================================
--- MAIN HENNESSY MENU BAR (Draggable Top Bar)
+-- MAIN HENNESSY MENU BAR (Draggable)
 -- ========================================================================
 local mainButton = Instance.new("TextButton")
 mainButton.Size = UDim2.new(0, 160, 0, 38)
@@ -126,7 +126,7 @@ closeCorner.Parent = closeButton
 -- DROPDOWN CONTAINER
 -- ========================================================================
 local dropdownContainer = Instance.new("Frame")
-dropdownContainer.Size = UDim2.new(0, 160, 0, 175)
+dropdownContainer.Size = UDim2.new(0, 160, 0, 250)
 dropdownContainer.Position = UDim2.new(0, 0, 1, 6)
 dropdownContainer.BackgroundTransparency = 1
 dropdownContainer.Visible = false
@@ -247,27 +247,75 @@ stStroke.Color = Color3.fromRGB(55, 62, 80)
 stStroke.Thickness = 1.5
 stStroke.Parent = statTrackerBtn
 
--- 4. Theme Toggle Button (Black/White)
-local themeBtn = Instance.new("TextButton")
-themeBtn.Size = UDim2.new(0, 160, 0, 36)
-themeBtn.Position = UDim2.new(0, 0, 0, 126)
-themeBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
-themeBtn.Font = Enum.Font.Gotham
-themeBtn.Text = "  Theme: Black"
-themeBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
-themeBtn.TextSize = 12
-themeBtn.TextXAlignment = Enum.TextXAlignment.Left
-themeBtn.ZIndex = 106
-themeBtn.Parent = dropdownContainer
+-- 4. Background Color Menu Toggle (Expands Radio Buttons)
+local colorMenuBtn = Instance.new("TextButton")
+colorMenuBtn.Size = UDim2.new(0, 160, 0, 36)
+colorMenuBtn.Position = UDim2.new(0, 0, 0, 126)
+colorMenuBtn.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
+colorMenuBtn.Font = Enum.Font.Gotham
+colorMenuBtn.Text = "  Background Color v"
+colorMenuBtn.TextColor3 = Color3.fromRGB(210, 215, 225)
+colorMenuBtn.TextSize = 12
+colorMenuBtn.TextXAlignment = Enum.TextXAlignment.Left
+colorMenuBtn.ZIndex = 106
+colorMenuBtn.Parent = dropdownContainer
 
-local tmCorner = Instance.new("UICorner")
-tmCorner.CornerRadius = UDim.new(0, 8)
-tmCorner.Parent = themeBtn
+local cmCorner = Instance.new("UICorner")
+cmCorner.CornerRadius = UDim.new(0, 8)
+cmCorner.Parent = colorMenuBtn
 
-local tmStroke = Instance.new("UIStroke")
-tmStroke.Color = Color3.fromRGB(55, 62, 80)
-tmStroke.Thickness = 1.5
-tmStroke.Parent = themeBtn
+local cmStroke = Instance.new("UIStroke")
+cmStroke.Color = Color3.fromRGB(55, 62, 80)
+cmStroke.Thickness = 1.5
+cmStroke.Parent = colorMenuBtn
+
+-- Radio Button Sub-Container
+local radioContainer = Instance.new("Frame")
+radioContainer.Size = UDim2.new(0, 150, 0, 72)
+radioContainer.Position = UDim2.new(0, 5, 0, 168)
+radioContainer.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
+radioContainer.Visible = false
+radioContainer.ZIndex = 107
+radioContainer.Parent = dropdownContainer
+
+local rcCorner = Instance.new("UICorner")
+rcCorner.CornerRadius = UDim.new(0, 6)
+rcCorner.Parent = radioContainer
+
+local rcStroke = Instance.new("UIStroke")
+rcStroke.Color = Color3.fromRGB(45, 50, 65)
+rcStroke.Thickness = 1
+rcStroke.Parent = radioContainer
+
+-- Radio Option 1: Black
+local radioBlack = Instance.new("TextButton")
+radioBlack.Size = UDim2.new(1, -10, 0, 30)
+radioBlack.Position = UDim2.new(0, 5, 0, 4)
+radioBlack.BackgroundTransparency = 1
+radioBlack.Font = Enum.Font.Gotham
+radioBlack.Text = "  (*) Black (Default)"
+radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120) -- Active highlight color
+radioBlack.TextSize = 11
+radioBlack.TextXAlignment = Enum.TextXAlignment.Left
+radioBlack.ZIndex = 108
+radioBlack.Parent = radioContainer
+
+-- Radio Option 2: White
+local radioWhite = Instance.new("TextButton")
+radioWhite.Size = UDim2.new(1, -10, 0, 30)
+radioWhite.Position = UDim2.new(0, 5, 0, 36)
+radioWhite.BackgroundTransparency = 1
+radioWhite.Font = Enum.Font.Gotham
+radioWhite.Text = "  ( ) White"
+radioWhite.TextColor3 = Color3.fromRGB(180, 185, 195)
+radioWhite.TextSize = 11
+radioWhite.TextXAlignment = Enum.TextXAlignment.Left
+radioWhite.ZIndex = 108
+radioWhite.Parent = radioContainer
+
+colorMenuBtn.MouseButton1Click:Connect(function()
+    radioContainer.Visible = not radioContainer.Visible
+end)
 
 -- ========================================================================
 -- CENTERED STAT TRACKER PANEL
@@ -316,21 +364,32 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
-local statKeys = {"coins", "rubies", "gems", "keys", "upper", "lower", "party eggs", "alien eggs"}
+-- Updated Stat Keys matching user request
+local statConfig = {
+    {key = "coins", display = "coins"},
+    {key = "rubies", display = "rubies"},
+    {key = "gems", display = "gems"},
+    {key = "vip key", display = "VIP key"},
+    {key = "vip upper", display = "VIP upper half"},
+    {key = "vip lower", display = "VIP lower half"},
+    {key = "party eggs", display = "party eggs"},
+    {key = "alien eggs", display = "alien eggs"}
+}
+
 local statLabels = {}
 
-for i, key in ipairs(statKeys) do
+for i, cfg in ipairs(statConfig) do
     local lbl = Instance.new("TextLabel")
     lbl.LayoutOrder = i
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.Gotham
-    lbl.Text = string.format("%s: 0", key)
+    lbl.Text = string.format("%s: 0", cfg.display)
     lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
     lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[key] = lbl
+    statLabels[cfg.key] = {label = lbl, display = cfg.display}
 end
 
 -- Toggle Stat Tracker Visibility & Background Overlay
@@ -342,31 +401,39 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
 end)
 
--- Theme Switcher (Black / White Screen & Panel Adjustment)
-local currentTheme = "Black"
-themeBtn.MouseButton1Click:Connect(function()
-    if currentTheme == "Black" then
-        currentTheme = "White"
-        themeBtn.Text = "  Theme: White"
-        fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        statFrame.BackgroundColor3 = Color3.fromRGB(240, 242, 245)
-        statStroke.Color = Color3.fromRGB(180, 185, 195)
-        titleLabel.TextColor3 = Color3.fromRGB(20, 22, 30)
-        for _, lbl in pairs(statLabels) do
-            lbl.TextColor3 = Color3.fromRGB(30, 32, 40)
-        end
-    else
-        currentTheme = "Black"
-        themeBtn.Text = "  Theme: Black"
-        fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        statFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
-        statStroke.Color = Color3.fromRGB(55, 62, 80)
-        titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        for _, lbl in pairs(statLabels) do
-            lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
-        end
+-- Radio Button Theme Switcher Logic (Black vs White)
+local function setBlackTheme()
+    radioBlack.Text = "  (*) Black (Default)"
+    radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
+    radioWhite.Text = "  ( ) White"
+    radioWhite.TextColor3 = Color3.fromRGB(180, 185, 195)
+    
+    fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    statFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
+    statStroke.Color = Color3.fromRGB(55, 62, 80)
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    for _, item in pairs(statLabels) do
+        item.label.TextColor3 = Color3.fromRGB(220, 220, 220)
     end
-end)
+end
+
+local function setWhiteTheme()
+    radioWhite.Text = "  (*) White"
+    radioWhite.TextColor3 = Color3.fromRGB(100, 225, 120)
+    radioBlack.Text = "  ( ) Black (Default)"
+    radioBlack.TextColor3 = Color3.fromRGB(180, 185, 195)
+    
+    fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    statFrame.BackgroundColor3 = Color3.fromRGB(240, 242, 245)
+    statStroke.Color = Color3.fromRGB(180, 185, 195)
+    titleLabel.TextColor3 = Color3.fromRGB(20, 22, 30)
+    for _, item in pairs(statLabels) do
+        item.label.TextColor3 = Color3.fromRGB(30, 32, 40)
+    end
+end
+
+radioBlack.MouseButton1Click:Connect(setBlackTheme)
+radioWhite.MouseButton1Click:Connect(setWhiteTheme)
 
 -- Make Center Panel Draggable
 local UIS = game:GetService("UserInputService")
@@ -397,7 +464,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Pet Universe Targeted Stat Reader
+-- Pet Universe Targeted Stat Reader Loop
 task.spawn(function()
     while screenGui.Parent do
         task.wait(0.5)
@@ -410,12 +477,12 @@ task.spawn(function()
                 player
             }
 
-            for key, label in pairs(statLabels) do
+            for searchKey, item in pairs(statLabels) do
                 local foundValue = nil
                 for _, container in ipairs(searchContainers) do
                     if container then
                         for _, child in ipairs(container:GetDescendants()) do
-                            if string.lower(child.Name):find(key) then
+                            if string.lower(child.Name):find(searchKey) then
                                 if child:IsA("ValueBase") or child:IsA("StringValue") then
                                     foundValue = child.Value
                                     break
@@ -427,9 +494,9 @@ task.spawn(function()
                 end
 
                 if foundValue ~= nil then
-                    label.Text = string.format("%s: %s", key, tostring(foundValue))
+                    item.label.Text = string.format("%s: %s", item.display, tostring(foundValue))
                 else
-                    label.Text = string.format("%s: 0", key)
+                    item.label.Text = string.format("%s: 0", item.display)
                 end
             end
         end)
@@ -699,4 +766,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("[Hennessy Hub] Screen Cover & Centered UI Fix Applied!")
+print("[Hennessy Hub] Radio Button Theme Selector & VIP Key Labels Loaded Successfully!")

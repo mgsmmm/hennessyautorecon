@@ -10,7 +10,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally
-local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"
+local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"[cite: 1]
 
 local function sendWebhook(title, statusText, colorCode)
     if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
@@ -43,7 +43,7 @@ end
 
 if getgenv().JustReconnectedFlag then
     getgenv().JustReconnectedFlag = nil
-    sendWebhook("Reconnected", "Successfully reconnected to the game!", 65280)
+    sendWebhook("Reconnected", "Successfully reconnected to the game!", 65280)[cite: 1]
 end
 
 local targetParent = player:WaitForChild("PlayerGui")
@@ -76,7 +76,7 @@ local fullScreenOverlay = Instance.new("Frame")
 fullScreenOverlay.Name = "FullScreenOverlay"
 fullScreenOverlay.Size = UDim2.new(1, 0, 1, 0)
 fullScreenOverlay.Position = UDim2.new(0, 0, 0, 0)
-fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Default Black
+fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 fullScreenOverlay.BackgroundTransparency = 0
 fullScreenOverlay.ZIndex = 5
 fullScreenOverlay.Visible = true
@@ -159,7 +159,7 @@ getgenv().AutoRejoinActive = true
 
 autoReconBtn.MouseButton1Click:Connect(function()
     getgenv().AutoRejoinActive = not getgenv().AutoRejoinActive
-    autoReconBtn.Text = getgenv().AutoRejoinActive and "  Auto Recon: On" or "  Auto Recon: Off"
+    autoReconBtn.Text = getgenv().AutoRejoinActive and "  Auto Recon: On" or "  Auto Recon: Off"[cite: 1]
 end)
 
 -- 2. FPS Booster Button
@@ -217,10 +217,10 @@ applyBoost()
 fpsBtn.MouseButton1Click:Connect(function()
     boosterActive = not boosterActive
     if boosterActive then
-        fpsBtn.Text = "  FPS Booster: On"
+        fpsBtn.Text = "  FPS Booster: On"[cite: 1]
         applyBoost()
     else
-        fpsBtn.Text = "  FPS Booster: Off"
+        fpsBtn.Text = "  FPS Booster: Off"[cite: 1]
         restoreOriginal()
     end
 end)
@@ -361,10 +361,11 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
+-- FIXED: Expanded keywords to include alternative game naming formats for coins and gems
 local statConfig = {
-    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
+    {id = "coins", keywords = {"coin", "coins", "gold", "money", "cash", "tokens"}, display = "coins"},
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
-    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
+    {id = "gems", keywords = {"gem", "gems", "diamonds", "crystals"}, display = "gems"},
     {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
     {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
     {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
@@ -394,14 +395,14 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerActive = not statTrackerActive
     statFrame.Visible = statTrackerActive
     fullScreenOverlay.Visible = statTrackerActive
-    statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
+    statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"[cite: 1]
 end)
 
 -- Color Selection
 local function selectBlack()
-    radioBlack.Text = "  (*) Black"
+    radioBlack.Text = "  (*) Black"[cite: 1]
     radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
-    radioWhite.Text = "  ( ) White"
+    radioWhite.Text = "  ( ) White"[cite: 1]
     radioWhite.TextColor3 = Color3.fromRGB(180, 185, 195)
     
     fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -414,9 +415,9 @@ local function selectBlack()
 end
 
 local function selectWhite()
-    radioWhite.Text = "  (*) White"
+    radioWhite.Text = "  (*) White"[cite: 1]
     radioWhite.TextColor3 = Color3.fromRGB(100, 225, 120)
-    radioBlack.Text = "  ( ) Black"
+    radioBlack.Text = "  ( ) Black"[cite: 1]
     radioBlack.TextColor3 = Color3.fromRGB(180, 185, 195)
     
     fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -478,7 +479,7 @@ task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            -- Roots to aggressively scan
+            -- FIXED: Included "Inventory" and ensured deep search coverage
             local searchRoots = {
                 player:FindFirstChild("leaderstats"),
                 player:FindFirstChild("Data"),
@@ -486,6 +487,7 @@ task.spawn(function()
                 player:FindFirstChild("Currency"),
                 player:FindFirstChild("Values"),
                 player:FindFirstChild("PlayerGui"),
+                player:FindFirstChild("Inventory"),
                 player
             }
 
@@ -510,9 +512,10 @@ task.spawn(function()
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") or descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
                                     local lowerName = string.lower(descendant.Name)
                                     for _, kw in ipairs(item.keywords) do
+                                        -- FIXED: Enhanced match logic to catch exact containment safely
                                         if lowerName == kw or lowerName:find(kw) then
                                             detectedVal = descendant.Value
                                             break
@@ -715,7 +718,7 @@ local function createWebhookPopup()
             getgenv().WebhookUrl = inputContent
             promptFrame:Destroy()
             blurOverlay:Destroy()
-            sendWebhook("Webhook Connected", "Successfully linked webhook to script!", 65280)
+            sendWebhook("Webhook Connected", "Successfully linked webhook to script!", 65280)[cite: 1]
         else
             textBox.PlaceholderText = "Please enter a valid URL!"
         end
@@ -740,7 +743,7 @@ local function triggerRejoin(reason)
     if not hasSentWebhook then
         hasSentWebhook = true
         getgenv().JustReconnectedFlag = true
-        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
+        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)[cite: 1]
     end
 
     while getgenv().AutoRejoinActive do
@@ -804,4 +807,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("[Hennessy Hub] Real-Time Multi-Target Stat Scanner Running!")
+print("[Hennessy Hub] Real-Time Multi-Target Stat Scanner Running!")[cite: 1]

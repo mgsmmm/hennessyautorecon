@@ -362,14 +362,14 @@ gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
 local statConfig = {
-    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
-    {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
-    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey", "key"}, display = "VIP key"},
+    {id = "coins", keywords = {"coins", "coin"}, display = "coins"},
+    {id = "rubies", keywords = {"rubies", "ruby"}, display = "rubies"},
+    {id = "gems", keywords = {"gems", "gem"}, display = "gems"},
+    {id = "vip_key", keywords = {"vip key", "vipkey", "key", "keys"}, display = "VIP key"},
     {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
     {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party", "eggs", "egg"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "party_eggs", keywords = {"party eggs", "party egg", "party", "eggs", "egg"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien eggs", "alien egg", "alien"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -461,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP (FIXED PARSER)
+-- ADVANCED REAL-TIME STAT SCANNER LOOP (FIXED PARSER & CASE MATCHING)
 -- ========================================================================
 local function parseStatValue(val)
     if type(val) == "number" then
@@ -538,9 +538,10 @@ task.spawn(function()
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") or descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
                                     local lowerName = string.lower(descendant.Name)
                                     for _, kw in ipairs(item.keywords) do
+                                        -- Match exact name or partial containment safely
                                         if lowerName == kw or lowerName:find(kw) then
                                             detectedVal = descendant.Value
                                             break
@@ -833,4 +834,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.1")
+print("v1.0.2")

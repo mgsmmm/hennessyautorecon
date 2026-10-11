@@ -360,7 +360,6 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
--- UPDATED MATCHING KEYWORDS FOR PETS UNIVERSE KEYS & EGGS
 local statConfig = {
     {id = "coins", exact = {"coins", "coin"}, display = "coins"},
     {id = "rubies", exact = {"rubies", "ruby"}, display = "rubies"},
@@ -523,7 +522,6 @@ local function formatNumber(n)
     return formatted
 end
 
--- Helper to check if string matches any pattern in exact list
 local function matchesExact(name, exactList)
     local lowerName = name:lower()
     for _, kw in ipairs(exactList) do
@@ -585,7 +583,6 @@ task.spawn(function()
                                         break
                                     end
                                 elseif descendant:IsA("Folder") or descendant:IsA("Model") then
-                                    -- Check if items/eggs/keys are stored as individual objects inside folders
                                     if matchesExact(descendant.Name, item.exact) then
                                         local amountVal = descendant:FindFirstChild("Amount") or descendant:FindFirstChild("Value") or descendant:FindFirstChild("Count")
                                         if amountVal and amountVal.Value then
@@ -875,9 +872,9 @@ task.spawn(function()
 end)
 
 Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if leavingPlayer == player me
+    if leavingPlayer == player then
         triggerRejoin("PlayerRemoving Event")
     end
 end)
 
-print("v1.0.6")
+print("v1.0.7")

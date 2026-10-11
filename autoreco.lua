@@ -76,7 +76,7 @@ local fullScreenOverlay = Instance.new("Frame")
 fullScreenOverlay.Name = "FullScreenOverlay"
 fullScreenOverlay.Size = UDim2.new(1, 0, 1, 0)
 fullScreenOverlay.Position = UDim2.new(0, 0, 0, 0)
-fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Default Black
+fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 fullScreenOverlay.BackgroundTransparency = 0
 fullScreenOverlay.ZIndex = 5
 fullScreenOverlay.Visible = true
@@ -106,7 +106,6 @@ mainStroke.Color = Color3.fromRGB(55, 62, 80)
 mainStroke.Thickness = 1.5
 mainStroke.Parent = mainButton
 
--- Master Kill Switch Button (X)
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 26, 0, 26)
 closeButton.Position = UDim2.new(1, -30, 0.5, -13)
@@ -365,11 +364,11 @@ local statConfig = {
     {id = "coins", keywords = {"coins", "coin"}, display = "coins"},
     {id = "rubies", keywords = {"rubies", "ruby"}, display = "rubies"},
     {id = "gems", keywords = {"gems", "gem"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey", "key", "keys"}, display = "VIP key"},
+    {id = "vip_key", keywords = {"vip key", "vipkey", "ticketkey", "key"}, display = "VIP key"},
     {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
     {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party eggs", "party egg", "party", "eggs", "egg"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien eggs", "alien egg", "alien"}, display = "alien eggs"}
+    {id = "party_eggs", keywords = {"eggs", "egg", "party egg", "party eggs"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -461,7 +460,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP (FIXED PARSER & CASE MATCHING)
+-- TARGETED REAL-TIME STAT SCANNER LOOP
 -- ========================================================================
 local function parseStatValue(val)
     if type(val) == "number" then
@@ -506,43 +505,58 @@ task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            local searchRoots = {
-                player:FindFirstChild("leaderstats"),
-                player:FindFirstChild("Data"),
-                player:FindFirstChild("Stats"),
-                player:FindFirstChild("Currency"),
-                player:FindFirstChild("Inventory"),
-                player:FindFirstChild("Values"),
-                player:FindFirstChild("PlayerGui"),
-                player
-            }
-
+            -- Priority 1: Check LocalPlayer leaderstats directly first
+            local leaderstats = player:FindFirstChild("leaderstats")
+            
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
 
-                -- 1. Check Attributes on LocalPlayer
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
-                            detectedVal = attrVal
-                            break
+                -- Scan Leaderstats explicitly first
+                if leaderstats then
+                    for _, child in ipairs(leaderstats:GetChildren()) do
+                        local childLower = child.Name:lower()
+                        for _, kw in ipairs(item.keywords) do
+                            if childLower == kw then
+                                detectedVal = child.Value
+                                break
+                            end
                         end
+                        if detectedVal ~= nil then break end
                     end
-                    if detectedVal ~= nil then break end
                 end
 
-                -- 2. Scan through all ValueBase instances deep in trees
+                -- Priority 2: Check Player attributes
                 if detectedVal == nil then
-                    for _, root in ipairs(searchRoots) do
+                    local attributes = player:GetAttributes()
+                    for attrName, attrVal in pairs(attributes) do
+                        local lowerAttr = attrName:lower()
+                        for _, kw in ipairs(item.keywords) do
+                            if lowerAttr == kw or lowerAttr:find(kw) then
+                                detectedVal = attrVal
+                                break
+                            end
+                        end
+                        if detectedVal ~= nil then break end
+                    end
+                end
+
+                -- Priority 3: Scan LocalPlayer inner descendants (Excluding ReplicatedStorage)
+                if detectedVal == nil then
+                    local playerRoots = {
+                        player:FindFirstChild("Data"),
+                        player:FindFirstChild("Stats"),
+                        player:FindFirstChild("Currency"),
+                        player:FindFirstChild("Inventory"),
+                        player:FindFirstChild("PlayerGui")
+                    }
+                    
+                    for _, root in ipairs(playerRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
                                 if descendant:IsA("ValueBase") or descendant:IsA("StringValue") or descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
-                                    local lowerName = string.lower(descendant.Name)
+                                    local lowerName = descendant.Name:lower()
                                     for _, kw in ipairs(item.keywords) do
-                                        -- Match exact name or partial containment safely
-                                        if lowerName == kw or lowerName:find(kw) then
+                                        if lowerName == kw then
                                             detectedVal = descendant.Value
                                             break
                                         end
@@ -555,7 +569,7 @@ task.spawn(function()
                     end
                 end
 
-                -- 3. Update Label UI with Flexible Number/String Parsing
+                -- Update UI Label
                 if detectedVal ~= nil then
                     local parsed = parseStatValue(detectedVal)
                     if type(parsed) == "number" then
@@ -638,7 +652,6 @@ mainButton.MouseButton1Click:Connect(function()
     dropdownContainer.Visible = not dropdownContainer.Visible
 end)
 
--- Master Kill Switch
 closeButton.MouseButton1Click:Connect(function()
     getgenv().AutoRejoinActive = false
     restoreOriginal()
@@ -834,4 +847,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.2")
+print("v1.0.3")

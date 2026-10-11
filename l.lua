@@ -360,15 +360,16 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
+-- UPDATED MATCHING KEYWORDS FOR PETS UNIVERSE KEYS & EGGS
 local statConfig = {
-    {id = "coins", keywords = {"coins", "coin"}, display = "coins"},
-    {id = "rubies", keywords = {"rubies", "ruby"}, display = "rubies"},
-    {id = "gems", keywords = {"gems", "gem"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey", "ticketkey", "key"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "coins", exact = {"coins", "coin"}, display = "coins"},
+    {id = "rubies", exact = {"rubies", "ruby"}, display = "rubies"},
+    {id = "gems", exact = {"gems", "gem"}, display = "gems"},
+    {id = "vip_key", exact = {"vip key", "vipkey", "vip_key", "ticket key", "ticketkey"}, display = "VIP key"},
+    {id = "vip_upper", exact = {"vip upper half", "vip upper", "vipupper", "upper half", "upperhalf"}, display = "VIP upper half"},
+    {id = "vip_lower", exact = {"vip lower half", "vip lower", "viplower", "lower half", "lowerhalf"}, display = "VIP lower half"},
+    {id = "party_eggs", exact = {"party egg", "party eggs", "partyegg", "partyeggs"}, display = "party eggs"},
+    {id = "alien_eggs", exact = {"alien egg", "alien eggs", "alienegg", "alieneggs"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -384,7 +385,7 @@ for i, cfg in ipairs(statConfig) do
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
+    statLabels[cfg.id] = {label = lbl, exact = cfg.exact, display = cfg.display}
 end
 
 -- Toggle Stat Tracker Visibility & Background Overlay
@@ -460,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- TARGETED REAL-TIME STAT SCANNER LOOP (SUFFIX & EGG FIX)
+-- TARGETED REAL-TIME STAT SCANNER LOOP
 -- ========================================================================
 local suffixes = {
     {s = "no", m = 1e30},
@@ -522,6 +523,17 @@ local function formatNumber(n)
     return formatted
 end
 
+-- Helper to check if string matches any pattern in exact list
+local function matchesExact(name, exactList)
+    local lowerName = name:lower()
+    for _, kw in ipairs(exactList) do
+        if lowerName == kw or lowerName:find("^" .. kw .. "$") or lowerName:find(kw) then
+            return true
+        end
+    end
+    return false
+end
+
 task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
@@ -531,17 +543,13 @@ task.spawn(function()
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
 
-                -- Scan Leaderstats explicitly first
+                -- Priority 1: Check Leaderstats
                 if leaderstats then
                     for _, child in ipairs(leaderstats:GetChildren()) do
-                        local childLower = child.Name:lower()
-                        for _, kw in ipairs(item.keywords) do
-                            if childLower == kw then
-                                detectedVal = child.Value
-                                break
-                            end
+                        if matchesExact(child.Name, item.exact) then
+                            detectedVal = child.Value
+                            break
                         end
-                        if detectedVal ~= nil then break end
                     end
                 end
 
@@ -549,24 +557,22 @@ task.spawn(function()
                 if detectedVal == nil then
                     local attributes = player:GetAttributes()
                     for attrName, attrVal in pairs(attributes) do
-                        local lowerAttr = attrName:lower()
-                        for _, kw in ipairs(item.keywords) do
-                            if lowerAttr == kw or lowerAttr:find(kw) then
-                                detectedVal = attrVal
-                                break
-                            end
+                        if matchesExact(attrName, item.exact) then
+                            detectedVal = attrVal
+                            break
                         end
-                        if detectedVal ~= nil then break end
                     end
                 end
 
-                -- Priority 3: Scan LocalPlayer inner descendants
+                -- Priority 3: Scan LocalPlayer inner descendants & Inventory Folders
                 if detectedVal == nil then
                     local playerRoots = {
                         player:FindFirstChild("Data"),
                         player:FindFirstChild("Stats"),
                         player:FindFirstChild("Currency"),
                         player:FindFirstChild("Inventory"),
+                        player:FindFirstChild("Keys"),
+                        player:FindFirstChild("Eggs"),
                         player:FindFirstChild("PlayerGui")
                     }
                     
@@ -574,15 +580,22 @@ task.spawn(function()
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
                                 if descendant:IsA("ValueBase") or descendant:IsA("StringValue") or descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
-                                    local lowerName = descendant.Name:lower()
-                                    for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw then
-                                            detectedVal = descendant.Value
-                                            break
+                                    if matchesExact(descendant.Name, item.exact) then
+                                        detectedVal = descendant.Value
+                                        break
+                                    end
+                                elseif descendant:IsA("Folder") or descendant:IsA("Model") then
+                                    -- Check if items/eggs/keys are stored as individual objects inside folders
+                                    if matchesExact(descendant.Name, item.exact) then
+                                        local amountVal = descendant:FindFirstChild("Amount") or descendant:FindFirstChild("Value") or descendant:FindFirstChild("Count")
+                                        if amountVal and amountVal.Value then
+                                            detectedVal = amountVal.Value
+                                        else
+                                            detectedVal = #descendant:GetChildren()
                                         end
+                                        break
                                     end
                                 end
-                                if detectedVal ~= nil then break end
                             end
                         end
                         if detectedVal ~= nil then break end
@@ -862,9 +875,9 @@ task.spawn(function()
 end)
 
 Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if leavingPlayer == player then
+    if leavingPlayer == player me
         triggerRejoin("PlayerRemoving Event")
     end
 end)
 
-print("v1.0.5")
+print("v1.0.6")

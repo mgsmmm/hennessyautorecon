@@ -365,9 +365,9 @@ local statConfig = {
     {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
     {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
+    {id = "vip_key", keywords = {"vip key", "vipkey", "full key"}, display = "VIP key"},
+    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper half", "upperkey", "top half", "upper"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower half", "lowerkey", "bottom half", "lower"}, display = "VIP lower half"},
     {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
     {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
 }
@@ -461,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP
+-- ADVANCED PET UNIVERSE REAL-TIME STAT & ITEM SCANNER
 -- ========================================================================
 local function formatNumber(n)
     if type(n) ~= "number" then return tostring(n) end
@@ -478,12 +478,13 @@ task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            -- Roots to aggressively scan
             local searchRoots = {
                 player:FindFirstChild("leaderstats"),
                 player:FindFirstChild("Data"),
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
+                player:FindFirstChild("Inventory"),
+                player:FindFirstChild("Keys"),
                 player:FindFirstChild("Values"),
                 player:FindFirstChild("PlayerGui"),
                 player
@@ -491,8 +492,9 @@ task.spawn(function()
 
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
+                local instanceCount = 0
 
-                -- 1. Check Attributes on LocalPlayer
+                -- 1. Check Player Attributes
                 local attributes = player:GetAttributes()
                 for attrName, attrVal in pairs(attributes) do
                     local lowerAttr = string.lower(attrName)
@@ -505,17 +507,30 @@ task.spawn(function()
                     if detectedVal then break end
                 end
 
-                -- 2. Scan through all ValueBase instances deep in trees
+                -- 2. Deep Search across Data, Inventories, and Folders
                 if not detectedVal then
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") and not descendant:IsA("GuiObject") then
                                     local lowerName = string.lower(descendant.Name)
                                     for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw or lowerName:find(kw) then
-                                            detectedVal = descendant.Value
-                                            break
+                                        if lowerName == kw or (lowerName:find(kw) and (lowerName:find("key") or lowerName:find("half") or lowerName:find("egg") or lowerName:find("vip") or lowerName:find("item"))) then
+                                            if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                                local num = tonumber(descendant.Value)
+                                                if num then
+                                                    detectedVal = num
+                                                    break
+                                                else
+                                                    detectedVal = descendant.Value
+                                                    break
+                                                end
+                                            elseif descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value") then
+                                                detectedVal = descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Value")
+                                                break
+                                            else
+                                                instanceCount = instanceCount + 1
+                                            end
                                         end
                                     end
                                 end
@@ -524,6 +539,10 @@ task.spawn(function()
                         end
                         if detectedVal then break end
                     end
+                end
+
+                if detectedVal == nil and instanceCount > 0 then
+                    detectedVal = instanceCount
                 end
 
                 -- 3. Update Label UI

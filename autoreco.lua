@@ -10,7 +10,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally
-local WEBHOOK_URL = getgenv().WebhookUrl or "YOUR_DISCORD_WEBHOOK_URL_HERE"
+local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"
 
 local function sendWebhook(title, statusText, colorCode)
     if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
@@ -58,24 +58,8 @@ pcall(function()
     end
 end)
 
--- Remove old copies from every possible GUI parent. This prevents an older
--- tracker (which still shows 0 / true) from remaining visible after rerunning.
-local guiParents = {player:FindFirstChildOfClass("PlayerGui"), CoreGui}
-pcall(function()
-    if gethui then
-        table.insert(guiParents, gethui())
-    end
-end)
-
-local alreadyChecked = {}
-for _, guiParent in ipairs(guiParents) do
-    if guiParent and not alreadyChecked[guiParent] then
-        alreadyChecked[guiParent] = true
-        local oldGui = guiParent:FindFirstChild("HennessyHubGUI")
-        if oldGui then
-            oldGui:Destroy()
-        end
-    end
+if targetParent:FindFirstChild("HennessyHubGUI") then
+    targetParent.HennessyHubGUI:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
@@ -335,7 +319,7 @@ end)
 -- ========================================================================
 local statFrame = Instance.new("Frame")
 statFrame.Name = "StatTrackerPanel"
-statFrame.Size = UDim2.new(0, 430, 0, 205)
+statFrame.Size = UDim2.new(0, 360, 0, 170)
 statFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 statFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 statFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
@@ -364,29 +348,28 @@ titleLabel.ZIndex = 21
 titleLabel.Parent = statFrame
 
 local containerFrame = Instance.new("Frame")
-containerFrame.Size = UDim2.new(1, -20, 0, 150)
+containerFrame.Size = UDim2.new(1, -20, 0, 120)
 containerFrame.Position = UDim2.new(0, 10, 0, 42)
 containerFrame.BackgroundTransparency = 1
 containerFrame.ZIndex = 21
 containerFrame.Parent = statFrame
 
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0, 130, 0, 30)
-gridLayout.CellPadding = UDim2.new(0, 4, 0, 5)
+gridLayout.CellSize = UDim2.new(0, 108, 0, 26)
+gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
 gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
 local statConfig = {
-    {id = "coins", keywords = {"coins", "coin"}, display = "Coins"},
-    {id = "rubies", keywords = {"rubies", "ruby"}, display = "Rubies"},
-    {id = "gems", keywords = {"gems", "gem"}, display = "Gems"},
-    {id = "vip_key", keywords = {"vipkey", "vipkeys", "vip key", "vip keys"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vipupperhalf", "vip upper half", "upper half vip"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"viplowerhalf", "vip lower half", "lower half vip"}, display = "VIP lower half"},
-    {id = "eggs", keywords = {"eggs", "egg"}, display = "Eggs"},
-    {id = "party_eggs", keywords = {"partyeggs", "party eggs", "partyegg", "party egg"}, display = "Party eggs"},
-    {id = "alien_eggs", keywords = {"alieneggs", "alien eggs", "alienegg", "alien egg"}, display = "Alien eggs"}
+    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
+    {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
+    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
+    {id = "vip_key", keywords = {"vip key", "vipkey", "key"}, display = "VIP key"},
+    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
+    {id = "party_eggs", keywords = {"party egg", "party eggs", "party", "eggs", "egg"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -396,9 +379,9 @@ for i, cfg in ipairs(statConfig) do
     lbl.LayoutOrder = i
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.Gotham
-    lbl.Text = string.format("%s: Loading...", cfg.display)
+    lbl.Text = string.format("%s: 0", cfg.display)
     lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
-    lbl.TextSize = 10
+    lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
@@ -478,98 +461,112 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- REAL-TIME STAT SCANNER
--- Reads StringValue as well as numeric values. Boolean values are ignored.
--- The user's console confirmed leaderstats.Coins, Rubies, and Eggs are StringValues.
+-- ADVANCED REAL-TIME STAT SCANNER LOOP (FIXED PARSER)
 -- ========================================================================
-local function normalizeName(name)
-    return string.lower(tostring(name)):gsub("[%s_%-%.]", "")
-end
-
-local function isReadableStat(obj)
-    return obj:IsA("IntValue") or obj:IsA("NumberValue") or obj:IsA("StringValue")
-end
-
-local function isUsableValue(value)
-    if value == nil then return false end
-    if type(value) == "boolean" then return false end
-    local lower = string.lower(tostring(value))
-    if lower == "true" or lower == "false" then return false end
-    return true
-end
-
-local function findStat(item)
-    local leaderstats = player:FindFirstChild("leaderstats")
-
-    -- Prioritize the exact leaderstats folder shown in the console.
-    if leaderstats then
-        for _, obj in ipairs(leaderstats:GetChildren()) do
-            if isReadableStat(obj) then
-                local objectName = normalizeName(obj.Name)
-                for _, keyword in ipairs(item.keywords) do
-                    if objectName == normalizeName(keyword) and isUsableValue(obj.Value) then
-                        return tostring(obj.Value)
-                    end
-                end
+local function parseStatValue(val)
+    if type(val) == "number" then
+        return val
+    elseif type(val) == "boolean" then
+        return val and 1 or 0
+    elseif type(val) == "string" then
+        local cleaned = val:gsub(",", ""):match("^%s*(.-)%s*$")
+        local lower = cleaned:lower()
+        
+        if lower == "true" then return 1 end
+        if lower == "false" then return 0 end
+        
+        local num, suffix = lower:match("([%d%.]+)([kmbt]?)")
+        if num then
+            local n = tonumber(num)
+            if n then
+                if suffix == "k" then n = n * 1e3
+                elseif suffix == "m" then n = n * 1e6
+                elseif suffix == "b" then n = n * 1e9
+                elseif suffix == "t" then n = n * 1e12 end
+                return n
             end
         end
+        return tonumber(cleaned) or val
     end
+    return val
+end
 
-    -- Search common replicated data folders, never PlayerGui; exact matches first.
-    local roots = {leaderstats}
-    for _, rootName in ipairs({"Data", "Stats", "Currency", "Values", "Inventory", "PlayerData"}) do
-        local root = player:FindFirstChild(rootName)
-        if root then table.insert(roots, root) end
+local function formatNumber(n)
+    if type(n) ~= "number" then return tostring(n) end
+    local formatted = tostring(math.floor(n))
+    local k
+    while true do
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if k == 0 then break end
     end
-
-    for pass = 1, 2 do
-        for _, root in ipairs(roots) do
-            if root then
-                for _, obj in ipairs(root:GetDescendants()) do
-                    if isReadableStat(obj) and isUsableValue(obj.Value) then
-                        local objectName = normalizeName(obj.Name)
-                        for _, keyword in ipairs(item.keywords) do
-                            local key = normalizeName(keyword)
-                            local matched = (pass == 1 and objectName == key)
-                                or (pass == 2 and objectName:find(key, 1, true) ~= nil)
-                            if matched then
-                                return tostring(obj.Value)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    -- Numeric player attributes only; never display Boolean attributes as counts.
-    for attrName, attrValue in pairs(player:GetAttributes()) do
-        if type(attrValue) == "number" or type(attrValue) == "string" then
-            if isUsableValue(attrValue) then
-                local normalized = normalizeName(attrName)
-                for _, keyword in ipairs(item.keywords) do
-                    if normalized == normalizeName(keyword) then
-                        return tostring(attrValue)
-                    end
-                end
-            end
-        end
-    end
-
-    return nil
+    return formatted
 end
 
 task.spawn(function()
     while screenGui.Parent do
-        task.wait(1)
-        for _, item in pairs(statLabels) do
-            local ok, value = pcall(findStat, item)
-            if ok and value ~= nil then
-                item.label.Text = item.display .. ": " .. value
-            else
-                item.label.Text = item.display .. ": Not found"
+        task.wait(0.3)
+        pcall(function()
+            local searchRoots = {
+                player:FindFirstChild("leaderstats"),
+                player:FindFirstChild("Data"),
+                player:FindFirstChild("Stats"),
+                player:FindFirstChild("Currency"),
+                player:FindFirstChild("Inventory"),
+                player:FindFirstChild("Values"),
+                player:FindFirstChild("PlayerGui"),
+                player
+            }
+
+            for statId, item in pairs(statLabels) do
+                local detectedVal = nil
+
+                -- 1. Check Attributes on LocalPlayer
+                local attributes = player:GetAttributes()
+                for attrName, attrVal in pairs(attributes) do
+                    local lowerAttr = string.lower(attrName)
+                    for _, kw in ipairs(item.keywords) do
+                        if lowerAttr == kw or lowerAttr:find(kw) then
+                            detectedVal = attrVal
+                            break
+                        end
+                    end
+                    if detectedVal ~= nil then break end
+                end
+
+                -- 2. Scan through all ValueBase instances deep in trees
+                if detectedVal == nil then
+                    for _, root in ipairs(searchRoots) do
+                        if root then
+                            for _, descendant in ipairs(root:GetDescendants()) do
+                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
+                                    local lowerName = string.lower(descendant.Name)
+                                    for _, kw in ipairs(item.keywords) do
+                                        if lowerName == kw or lowerName:find(kw) then
+                                            detectedVal = descendant.Value
+                                            break
+                                        end
+                                    end
+                                end
+                                if detectedVal ~= nil then break end
+                            end
+                        end
+                        if detectedVal ~= nil then break end
+                    end
+                end
+
+                -- 3. Update Label UI with Flexible Number/String Parsing
+                if detectedVal ~= nil then
+                    local parsed = parseStatValue(detectedVal)
+                    if type(parsed) == "number" then
+                        item.label.Text = string.format("%s: %s", item.display, formatNumber(parsed))
+                    else
+                        item.label.Text = string.format("%s: %s", item.display, tostring(parsed))
+                    end
+                else
+                    item.label.Text = string.format("%s: 0", item.display)
+                end
             end
-        end
+        end)
     end
 end)
 
@@ -836,4 +833,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.0") --this increases 0.0.1 every update or change it has
+print("v1.0.1")

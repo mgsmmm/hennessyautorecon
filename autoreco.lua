@@ -10,7 +10,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally
-local WEBHOOK_URL = getgenv().WebhookUrl or "https://discord.com/api/webhooks/1532835349728854128/ie6a1f70yZ5RiRupqHMoZ8o6GU7lJVBtASlpCy8b0SZqYRiBxmX-L8Y1SlAgNFmVwQzo"
+local WEBHOOK_URL = getgenv().WebhookUrl or "YOUR_DISCORD_WEBHOOK_URL_HERE"
 
 local function sendWebhook(title, statusText, colorCode)
     if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
@@ -366,10 +366,10 @@ local statConfig = {
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
     {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
     {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "vip_upper", keywords = {"vip upper half", "vipupperhalf", "vip upper", "vipupper", "upper half vip"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower half", "viplowerhalf", "vip lower", "viplower", "lower half vip"}, display = "VIP lower half"},
+    {id = "party_eggs", keywords = {"party eggs", "party egg", "partyeggs", "partyegg"}, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien eggs", "alien egg", "alieneggs", "alienegg"}, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -461,80 +461,90 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP
+-- FIXED REAL-TIME STAT SCANNER LOOP
+-- Reads numeric stats only; ignores booleans such as true/false.
+-- Exact name matches are checked before partial matches to reduce false hits.
 -- ========================================================================
 local function formatNumber(n)
-    if type(n) ~= "number" then return tostring(n) end
     local formatted = tostring(math.floor(n))
     local k
-    while true do
-        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-        if k == 0 then break end
-    end
+    repeat
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", "%1,%2")
+    until k == 0
     return formatted
+end
+
+local function normalizeName(name)
+    return string.lower(tostring(name)):gsub("[%s_%-%.]", "")
+end
+
+local function isNumericValue(valueObject)
+    return valueObject:IsA("IntValue") or valueObject:IsA("NumberValue")
+end
+
+local function getStatRoots()
+    local roots = {}
+    local rootNames = {"leaderstats", "Data", "Stats", "Currency", "Values", "Inventory", "PlayerData"}
+
+    for _, rootName in ipairs(rootNames) do
+        local root = player:FindFirstChild(rootName)
+        if root then
+            table.insert(roots, root)
+        end
+    end
+
+    -- Include the player tree as a fallback, but deliberately do not scan PlayerGui.
+    table.insert(roots, player)
+    return roots
+end
+
+local function findNumericStat(item, roots)
+    -- Numeric player attributes first; never treat true/false as a stat amount.
+    local attributes = player:GetAttributes()
+    for attrName, attrValue in pairs(attributes) do
+        if type(attrValue) == "number" then
+            local normalized = normalizeName(attrName)
+            for _, keyword in ipairs(item.keywords) do
+                if normalized == normalizeName(keyword) then
+                    return attrValue
+                end
+            end
+        end
+    end
+
+    -- Pass 1: exact names. Pass 2: partial names, but only numeric value objects.
+    for pass = 1, 2 do
+        for _, root in ipairs(roots) do
+            for _, obj in ipairs(root:GetDescendants()) do
+                if isNumericValue(obj) then
+                    local objectName = normalizeName(obj.Name)
+                    for _, keyword in ipairs(item.keywords) do
+                        local key = normalizeName(keyword)
+                        local matched = (pass == 1 and objectName == key)
+                            or (pass == 2 and objectName:find(key, 1, true) ~= nil)
+                        if matched then
+                            return obj.Value
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nil
 end
 
 task.spawn(function()
     while screenGui.Parent do
-        task.wait(0.3)
+        task.wait(1)
         pcall(function()
-            -- Roots to aggressively scan
-            local searchRoots = {
-                player:FindFirstChild("leaderstats"),
-                player:FindFirstChild("Data"),
-                player:FindFirstChild("Stats"),
-                player:FindFirstChild("Currency"),
-                player:FindFirstChild("Values"),
-                player:FindFirstChild("PlayerGui"),
-                player
-            }
-
-            for statId, item in pairs(statLabels) do
-                local detectedVal = nil
-
-                -- 1. Check Attributes on LocalPlayer
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
-                            detectedVal = attrVal
-                            break
-                        end
-                    end
-                    if detectedVal then break end
-                end
-
-                -- 2. Scan through all ValueBase instances deep in trees
-                if not detectedVal then
-                    for _, root in ipairs(searchRoots) do
-                        if root then
-                            for _, descendant in ipairs(root:GetDescendants()) do
-                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                    local lowerName = string.lower(descendant.Name)
-                                    for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw or lowerName:find(kw) then
-                                            detectedVal = descendant.Value
-                                            break
-                                        end
-                                    end
-                                end
-                                if detectedVal then break end
-                            end
-                        end
-                        if detectedVal then break end
-                    end
-                end
-
-                -- 3. Update Label UI
-                if detectedVal ~= nil then
-                    if type(detectedVal) == "number" then
-                        item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
-                    else
-                        item.label.Text = string.format("%s: %s", item.display, tostring(detectedVal))
-                    end
+            local roots = getStatRoots()
+            for _, item in pairs(statLabels) do
+                local value = findNumericStat(item, roots)
+                if value ~= nil then
+                    item.label.Text = string.format("%s: %s", item.display, formatNumber(value))
                 else
-                    item.label.Text = string.format("%s: 0", item.display)
+                    item.label.Text = string.format("%s: Not found", item.display)
                 end
             end
         end)
@@ -804,4 +814,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.0") --this increases 0.0.1 every update or change it has
+print("v1.0.1") --this increases 0.0.1 every update or change it has

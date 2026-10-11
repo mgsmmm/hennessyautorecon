@@ -76,7 +76,7 @@ local fullScreenOverlay = Instance.new("Frame")
 fullScreenOverlay.Name = "FullScreenOverlay"
 fullScreenOverlay.Size = UDim2.new(1, 0, 1, 0)
 fullScreenOverlay.Position = UDim2.new(0, 0, 0, 0)
-fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Default Black
+fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 fullScreenOverlay.BackgroundTransparency = 0
 fullScreenOverlay.ZIndex = 5
 fullScreenOverlay.Visible = true
@@ -365,11 +365,11 @@ local statConfig = {
     {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
     {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+    {id = "vip_key", keywords = {"vip key", "vipkey", "full key"}, display = "VIP key"},
+    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper half", "upperkey", "top half", "upper"}, display = "VIP upper half"},
+    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower half", "lowerkey", "bottom half", "lower"}, display = "VIP lower half"},
+    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, isEgg = true, display = "party eggs"},
+    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, isEgg = true, display = "alien eggs"}
 }
 
 local statLabels = {}
@@ -385,7 +385,7 @@ for i, cfg in ipairs(statConfig) do
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
+    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display, isEgg = cfg.isEgg}
 end
 
 -- Toggle Stat Tracker Visibility & Background Overlay
@@ -461,7 +461,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP
+-- STAT SCANNER
 -- ========================================================================
 local function formatNumber(n)
     if type(n) ~= "number" then return tostring(n) end
@@ -476,14 +476,16 @@ end
 
 task.spawn(function()
     while screenGui.Parent do
-        task.wait(0.3)
+        task.wait(0.4)
         pcall(function()
-            -- Roots to aggressively scan
             local searchRoots = {
                 player:FindFirstChild("leaderstats"),
                 player:FindFirstChild("Data"),
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
+                player:FindFirstChild("Inventory"),
+                player:FindFirstChild("Eggs"),
+                player:FindFirstChild("Keys"),
                 player:FindFirstChild("Values"),
                 player:FindFirstChild("PlayerGui"),
                 player
@@ -492,47 +494,38 @@ task.spawn(function()
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
 
-                -- 1. Check Attributes on LocalPlayer
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
-                    for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
-                            detectedVal = attrVal
-                            break
+                for _, root in ipairs(searchRoots) do
+                    if root then
+                        for _, descendant in ipairs(root:GetDescendants()) do
+                            if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") then
+                                local lowerName = string.lower(descendant.Name)
+                                for _, kw in ipairs(item.keywords) do
+                                    if lowerName:find(kw) then
+                                        if descendant:IsA("ValueBase") then
+                                            local num = tonumber(descendant.Value)
+                                            if num then
+                                                detectedVal = num
+                                                break
+                                            end
+                                        elseif descendant:IsA("TextLabel") and descendant.Visible and descendant.Text ~= "" then
+                                            local clean = string.gsub(descendant.Text, "[^0-9.]", "")
+                                            local num = tonumber(clean)
+                                            if num and num > 0 then
+                                                detectedVal = num
+                                                break
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                            if detectedVal then break end
                         end
                     end
                     if detectedVal then break end
                 end
 
-                -- 2. Scan through all ValueBase instances deep in trees
-                if not detectedVal then
-                    for _, root in ipairs(searchRoots) do
-                        if root then
-                            for _, descendant in ipairs(root:GetDescendants()) do
-                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                    local lowerName = string.lower(descendant.Name)
-                                    for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw or lowerName:find(kw) then
-                                            detectedVal = descendant.Value
-                                            break
-                                        end
-                                    end
-                                end
-                                if detectedVal then break end
-                            end
-                        end
-                        if detectedVal then break end
-                    end
-                end
-
-                -- 3. Update Label UI
                 if detectedVal ~= nil then
-                    if type(detectedVal) == "number" then
-                        item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
-                    else
-                        item.label.Text = string.format("%s: %s", item.display, tostring(detectedVal))
-                    end
+                    item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
                 else
                     item.label.Text = string.format("%s: 0", item.display)
                 end
@@ -542,7 +535,7 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- UNDETECTABLE MOBILE ANTI-AFK
+-- ANTI-AFK
 -- ========================================================================
 local function sendTouchPing()
     pcall(function()
@@ -552,10 +545,7 @@ local function sendTouchPing()
     end)
 end
 
-player.Idled:Connect(function()
-    sendTouchPing()
-end)
-
+player.Idled:Connect(sendTouchPing)
 task.spawn(function()
     while screenGui.Parent do
         task.wait(240)
@@ -564,7 +554,7 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- DRAGGABLE TOP MENU LOGIC & KILL SWITCH
+-- MENU & RECONNECT CONTROLS
 -- ========================================================================
 local dragging, dragInput, dragStart, startPos
 local hasMoved = false
@@ -575,12 +565,6 @@ mainButton.InputBegan:Connect(function(input)
         hasMoved = false
         dragStart = input.Position
         startPos = mainButton.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
 
@@ -593,215 +577,37 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        if delta.Magnitude > 3 then
-            hasMoved = true
-        end
+        if delta.Magnitude > 3 then hasMoved = true end
         mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
 mainButton.MouseButton1Click:Connect(function()
-    if hasMoved then
-        hasMoved = false
-        return
-    end
+    if hasMoved then hasMoved = false return end
     dropdownContainer.Visible = not dropdownContainer.Visible
 end)
 
--- Master Kill Switch
 closeButton.MouseButton1Click:Connect(function()
     getgenv().AutoRejoinActive = false
     restoreOriginal()
     screenGui:Destroy()
 end)
 
--- ========================================================================
--- WEBHOOK POPUP PROMPT
--- ========================================================================
-local function createWebhookPopup()
-    if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
-        return
-    end
-
-    local blurOverlay = Instance.new("Frame")
-    blurOverlay.Size = UDim2.new(1, 0, 1, 0)
-    blurOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    blurOverlay.BackgroundTransparency = 0.5
-    blurOverlay.ZIndex = 999
-    blurOverlay.Parent = screenGui
-
-    local promptFrame = Instance.new("Frame")
-    promptFrame.Size = UDim2.new(0, 360, 0, 160)
-    promptFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    promptFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    promptFrame.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
-    promptFrame.BorderSizePixel = 0
-    promptFrame.ZIndex = 1000
-    promptFrame.Parent = screenGui
-
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 10)
-    frameCorner.Parent = promptFrame
-
-    local frameStroke = Instance.new("UIStroke")
-    frameStroke.Color = Color3.fromRGB(55, 62, 80)
-    frameStroke.Thickness = 1.5
-    frameStroke.Parent = promptFrame
-
-    local promptTitle = Instance.new("TextLabel")
-    promptTitle.Size = UDim2.new(1, -50, 0, 40)
-    promptTitle.Position = UDim2.new(0, 15, 0, 10)
-    promptTitle.BackgroundTransparency = 1
-    promptTitle.Font = Enum.Font.Gotham
-    promptTitle.Text = "Enter Discord Webhook URL"
-    promptTitle.TextColor3 = Color3.fromRGB(210, 215, 225)
-    promptTitle.TextSize = 15
-    promptTitle.TextXAlignment = Enum.TextXAlignment.Left
-    promptTitle.ZIndex = 1001
-    promptTitle.Parent = promptFrame
-
-    local promptClose = Instance.new("TextButton")
-    promptClose.Size = UDim2.new(0, 32, 0, 32)
-    promptClose.Position = UDim2.new(1, -42, 0, 14)
-    promptClose.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
-    promptClose.Font = Enum.Font.Gotham
-    promptClose.Text = "X"
-    promptClose.TextColor3 = Color3.fromRGB(180, 185, 195)
-    promptClose.TextSize = 14
-    promptClose.ZIndex = 1002
-    promptClose.Parent = promptFrame
-
-    local pcCorner = Instance.new("UICorner")
-    pcCorner.CornerRadius = UDim.new(0, 6)
-    pcCorner.Parent = promptClose
-
-    local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(0, 320, 0, 35)
-    textBox.Position = UDim2.new(0.5, -160, 0, 60)
-    textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
-    textBox.Font = Enum.Font.Gotham
-    textBox.PlaceholderText = "Paste webhook URL here..."
-    textBox.Text = ""
-    textBox.TextColor3 = Color3.fromRGB(210, 215, 225)
-    textBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 140)
-    textBox.TextSize = 13
-    textBox.ClearTextOnFocus = false
-    textBox.ZIndex = 1001
-    textBox.Parent = promptFrame
-
-    local boxCorner = Instance.new("UICorner")
-    boxCorner.CornerRadius = UDim.new(0, 6)
-    boxCorner.Parent = textBox
-
-    local submitButton = Instance.new("TextButton")
-    submitButton.Size = UDim2.new(0, 320, 0, 35)
-    submitButton.Position = UDim2.new(0.5, -160, 0, 108)
-    submitButton.BackgroundColor3 = Color3.fromRGB(45, 52, 68)
-    submitButton.Font = Enum.Font.Gotham
-    submitButton.Text = "Submit"
-    submitButton.TextColor3 = Color3.fromRGB(210, 215, 225)
-    submitButton.TextSize = 13
-    submitButton.ZIndex = 1001
-    submitButton.Parent = promptFrame
-
-    local sbCorner = Instance.new("UICorner")
-    sbCorner.CornerRadius = UDim.new(0, 6)
-    sbCorner.Parent = submitButton
-
-    submitButton.MouseButton1Click:Connect(function()
-        local inputContent = textBox.Text
-        if inputContent and inputContent ~= "" then
-            WEBHOOK_URL = inputContent
-            getgenv().WebhookUrl = inputContent
-            promptFrame:Destroy()
-            blurOverlay:Destroy()
-            sendWebhook("Webhook Connected", "Successfully linked webhook to script!", 65280)
-        else
-            textBox.PlaceholderText = "Please enter a valid URL!"
-        end
-    end)
-
-    promptClose.MouseButton1Click:Connect(function()
-        promptFrame:Destroy()
-        blurOverlay:Destroy()
-    end)
-end
-
-task.spawn(createWebhookPopup)
-
--- ========================================================================
--- AUTO RECONNECT & ERROR MONITORING
--- ========================================================================
-local hasSentWebhook = false
-
 local function triggerRejoin(reason)
     if not getgenv().AutoRejoinActive then return end
-    
-    if not hasSentWebhook then
-        hasSentWebhook = true
-        getgenv().JustReconnectedFlag = true
-        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
-    end
-
+    getgenv().JustReconnectedFlag = true
+    sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
     while getgenv().AutoRejoinActive do
-        pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
-        end)
-        task.wait(2)
-        pcall(function()
-            TeleportService:Teleport(game.PlaceId, player)
-        end)
-        task.wait(4)
+        pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player) end)
+        task.wait(3)
     end
 end
-
-TeleportService.TeleportInitFailed:Connect(function(targetPlayer, _, errorMessage)
-    if targetPlayer == player then
-        triggerRejoin("TeleportInitFailed: " .. tostring(errorMessage))
-    end
-end)
 
 pcall(function()
     GuiService.ErrorMessageChanged:Connect(function()
         local err = GuiService:GetErrorMessage()
-        if err and err ~= "" then
-            triggerRejoin("GuiService Error: " .. err)
-        end
+        if err and err ~= "" then triggerRejoin("GuiService Error: " .. err) end
     end)
 end)
 
-pcall(function()
-    ScriptContext.MessageOut:Connect(function(message, messageType)
-        local lowerMsg = string.lower(message)
-        if lowerMsg:find("shutdown") or lowerMsg:find("server shutting down") or lowerMsg:find("restart") then
-            triggerRejoin("Server Shutdown Event Log: " .. message)
-        end
-    end)
-end)
-
-task.spawn(function()
-    while screenGui.Parent do
-        task.wait(0.3)
-        pcall(function()
-            local robloxGui = CoreGui:FindFirstChild("RobloxGui")
-            if robloxGui then
-                for _, descendant in ipairs(robloxGui:GetDescendants()) do
-                    if descendant:IsA("TextLabel") and descendant.Visible then
-                        local text = string.lower(descendant.Text)
-                        if text:find("disconnected") or text:find("lost connection") or text:find("reconnect") or text:find("error code") or text:find("shut down") or text:find("server restart") then
-                            triggerRejoin("CoreGui Text Match: " .. descendant.Text)
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if leavingPlayer == player then
-        triggerRejoin("PlayerRemoving Event")
-    end
-end)
-
-print("[Hennessy Hub] Real-Time Multi-Target Stat Scanner Running!")
+print("[Hennessy Hub] Script loaded successfully!")

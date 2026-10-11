@@ -361,7 +361,6 @@ gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
--- FIXED: Expanded keywords to include alternative game naming formats for coins and gems
 local statConfig = {
     {id = "coins", keywords = {"coin", "coins", "gold", "money", "cash", "tokens"}, display = "coins"},
     {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
@@ -479,57 +478,73 @@ task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            -- FIXED: Included "Inventory" and ensured deep search coverage
-            local searchRoots = {
-                player:FindFirstChild("leaderstats"),
-                player:FindFirstChild("Data"),
-                player:FindFirstChild("Stats"),
-                player:FindFirstChild("Currency"),
-                player:FindFirstChild("Values"),
-                player:FindFirstChild("PlayerGui"),
-                player:FindFirstChild("Inventory"),
-                player
-            }
+            local leaderstats = player:FindFirstChild("leaderstats")
 
             for statId, item in pairs(statLabels) do
                 local detectedVal = nil
 
-                -- 1. Check Attributes on LocalPlayer
-                local attributes = player:GetAttributes()
-                for attrName, attrVal in pairs(attributes) do
-                    local lowerAttr = string.lower(attrName)
+                -- 1. Direct explicit checks for common game paths (handles capitalization matching Rubies)
+                if leaderstats then
                     for _, kw in ipairs(item.keywords) do
-                        if lowerAttr == kw or lowerAttr:find(kw) then
-                            detectedVal = attrVal
+                        local directMatch = leaderstats:FindFirstChild(kw) 
+                            or leaderstats:FindFirstChild(kw:gsub("^%l", string.upper))
+                            or leaderstats:FindFirstChild(kw:sub(1, 1):upper() .. kw:sub(2))
+                        
+                        if directMatch and (directMatch:IsA("ValueBase") or directMatch:IsA("NumberValue") or directMatch:IsA("IntValue")) then
+                            detectedVal = directMatch.Value
                             break
                         end
                     end
-                    if detectedVal then break end
                 end
 
-                -- 2. Scan through all ValueBase instances deep in trees
-                if not detectedVal then
+                -- 2. Check Attributes on LocalPlayer if not found yet
+                if detectedVal == nil then
+                    local attributes = player:GetAttributes()
+                    for attrName, attrVal in pairs(attributes) do
+                        local lowerAttr = string.lower(attrName)
+                        for _, kw in ipairs(item.keywords) do
+                            if lowerAttr == kw or lowerAttr:find(kw) then
+                                detectedVal = attrVal
+                                break
+                            end
+                        end
+                        if detectedVal ~= nil then break end
+                    end
+                end
+
+                -- 3. Fallback: Deep search through roots if still nil
+                if detectedVal == nil then
+                    local searchRoots = {
+                        leaderstats,
+                        player:FindFirstChild("Data"),
+                        player:FindFirstChild("Stats"),
+                        player:FindFirstChild("Currency"),
+                        player:FindFirstChild("Values"),
+                        player:FindFirstChild("PlayerGui"),
+                        player:FindFirstChild("Inventory"),
+                        player
+                    }
+
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
                                 if descendant:IsA("ValueBase") or descendant:IsA("StringValue") or descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
                                     local lowerName = string.lower(descendant.Name)
                                     for _, kw in ipairs(item.keywords) do
-                                        -- FIXED: Enhanced match logic to catch exact containment safely
                                         if lowerName == kw or lowerName:find(kw) then
                                             detectedVal = descendant.Value
                                             break
                                         end
                                     end
                                 end
-                                if detectedVal then break end
+                                if detectedVal ~= nil then break end
                             end
                         end
-                        if detectedVal then break end
+                        if detectedVal ~= nil then break end
                     end
                 end
 
-                -- 3. Update Label UI
+                -- 4. Update Label UI
                 if detectedVal ~= nil then
                     if type(detectedVal) == "number" then
                         item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))

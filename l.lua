@@ -367,7 +367,7 @@ local statConfig = {
     {id = "vip_key", keywords = {"vip key", "vipkey", "ticketkey", "key"}, display = "VIP key"},
     {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
     {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"eggs", "egg", "party egg", "party eggs"}, display = "party eggs"},
+    {id = "party_eggs", keywords = {"party egg", "party eggs"}, display = "party eggs"},
     {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
 }
 
@@ -460,8 +460,21 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- TARGETED REAL-TIME STAT SCANNER LOOP
+-- TARGETED REAL-TIME STAT SCANNER LOOP (SUFFIX & EGG FIX)
 -- ========================================================================
+local suffixes = {
+    {s = "no", m = 1e30},
+    {s = "oc", m = 1e27},
+    {s = "sp", m = 1e24},
+    {s = "sx", m = 1e21},
+    {s = "qi", m = 1e18},
+    {s = "qd", m = 1e15},
+    {s = "t",  m = 1e12},
+    {s = "b",  m = 1e9},
+    {s = "m",  m = 1e6},
+    {s = "k",  m = 1e3}
+}
+
 local function parseStatValue(val)
     if type(val) == "number" then
         return val
@@ -474,17 +487,16 @@ local function parseStatValue(val)
         if lower == "true" then return 1 end
         if lower == "false" then return 0 end
         
-        local num, suffix = lower:match("([%d%.]+)([kmbt]?)")
-        if num then
-            local n = tonumber(num)
-            if n then
-                if suffix == "k" then n = n * 1e3
-                elseif suffix == "m" then n = n * 1e6
-                elseif suffix == "b" then n = n * 1e9
-                elseif suffix == "t" then n = n * 1e12 end
-                return n
+        for _, suf in ipairs(suffixes) do
+            if lower:sub(-#suf.s) == suf.s then
+                local numPart = lower:sub(1, -#suf.s - 1)
+                local n = tonumber(numPart)
+                if n then
+                    return n * suf.m
+                end
             end
         end
+        
         return tonumber(cleaned) or val
     end
     return val
@@ -492,6 +504,16 @@ end
 
 local function formatNumber(n)
     if type(n) ~= "number" then return tostring(n) end
+    
+    for _, suf in ipairs(suffixes) do
+        if n >= suf.m then
+            local reduced = n / suf.m
+            -- Format with up to 1 decimal place if needed (e.g. 5.4m)
+            local formattedNum = string.format(reduced % 1 == 0 and "%.0f%s" :gsub("%%0f", "%%d") or "%.1f%s", reduced, suf.s)
+            return formattedNum
+        end
+    end
+    
     local formatted = tostring(math.floor(n))
     local k
     while true do
@@ -505,7 +527,6 @@ task.spawn(function()
     while screenGui.Parent do
         task.wait(0.3)
         pcall(function()
-            -- Priority 1: Check LocalPlayer leaderstats directly first
             local leaderstats = player:FindFirstChild("leaderstats")
             
             for statId, item in pairs(statLabels) do
@@ -540,7 +561,7 @@ task.spawn(function()
                     end
                 end
 
-                -- Priority 3: Scan LocalPlayer inner descendants (Excluding ReplicatedStorage)
+                -- Priority 3: Scan LocalPlayer inner descendants
                 if detectedVal == nil then
                     local playerRoots = {
                         player:FindFirstChild("Data"),
@@ -847,4 +868,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("v1.0.3")
+print("v1.0.4")

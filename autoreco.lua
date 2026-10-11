@@ -7,6 +7,7 @@ local ScriptContext = game:GetService("ScriptContext")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 local Terrain = Workspace:FindFirstChildOfClass("Terrain")
+local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 
 -- Check if WebhookUrl is already set globally, otherwise default placeholder
@@ -180,33 +181,10 @@ local storedObjects = {}
 local function applyBoost()
     pcall(function()
         Lighting.GlobalShadows = false
-        Lighting.FogEnd = 9e9
-        Lighting.Brightness = 1
         for _, v in ipairs(Lighting:GetChildren()) do
-            if v:IsA("PostEffect") or v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") then
+            if v:IsA("Atmosphere") or v:IsA("Clouds") then
                 v.Enabled = false
                 table.insert(storedObjects, v)
-            end
-        end
-    end)
-
-    pcall(function()
-        if Terrain then
-            Terrain.WaterWaveSize = 0
-            Terrain.WaterWaveSpeed = 0
-            Terrain.WaterTransparency = 1
-        end
-    end)
-
-    -- Forcefully strip heavy particle emitters, trails, and heavy effects across workspace
-    pcall(function()
-        for _, descendant in ipairs(Workspace:GetDescendants()) do
-            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") or descendant:IsA("Explosion") then
-                descendant.Enabled = false
-                table.insert(storedObjects, descendant)
-            elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-                descendant.Transparency = 1
-                table.insert(storedObjects, descendant)
             end
         end
     end)
@@ -218,10 +196,8 @@ local function restoreOriginal()
     end)
     for _, obj in ipairs(storedObjects) do
         if obj and obj.Parent then
-            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") or obj:IsA("PostEffect") or obj:IsA("Sky") or obj:IsA("Atmosphere") or obj:IsA("Clouds") then
+            if obj:IsA("Atmosphere") or obj:IsA("Clouds") then
                 obj.Enabled = true
-            elseif obj:IsA("Decal") or obj:IsA("Texture") then
-                obj.Transparency = 0
             end
         end
     end
@@ -239,6 +215,27 @@ fpsBtn.MouseButton1Click:Connect(function()
     else
         fpsBtn.Text = "  FPS Booster: Off"
         restoreOriginal()
+    end
+end)
+
+-- ========================================================================
+-- UNDETECTABLE NO-MOVEMENT ANTI-AFK SYSTEM
+-- ========================================================================
+pcall(function()
+    player.Idled:Connect(function()
+        VirtualUser:Button2Down(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), Workspace.CurrentCamera.CFrame)
+    end)
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(300) -- Trigger VirtualUser ping silently every 5 minutes to reset internal AFK timer
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0,0))
+        end)
     end
 end)
 
@@ -484,4 +481,4 @@ Players.PlayerRemoving:Connect(function(leavingPlayer)
     end
 end)
 
-print("[Hennessy Hub] Redesigned UI loaded successfully!")
+print("[Hennessy Hub] Redesigned UI & Anti-AFK loaded successfully!")

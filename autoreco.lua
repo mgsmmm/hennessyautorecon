@@ -76,7 +76,7 @@ local fullScreenOverlay = Instance.new("Frame")
 fullScreenOverlay.Name = "FullScreenOverlay"
 fullScreenOverlay.Size = UDim2.new(1, 0, 1, 0)
 fullScreenOverlay.Position = UDim2.new(0, 0, 0, 0)
-fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Default Black
+fullScreenOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 fullScreenOverlay.BackgroundTransparency = 0
 fullScreenOverlay.ZIndex = 5
 fullScreenOverlay.Visible = true
@@ -315,11 +315,11 @@ bgMenuBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ========================================================================
--- CENTERED STAT TRACKER PANEL
+-- CENTERED CURRENCY TRACKER PANEL
 -- ========================================================================
 local statFrame = Instance.new("Frame")
 statFrame.Name = "StatTrackerPanel"
-statFrame.Size = UDim2.new(0, 360, 0, 170)
+statFrame.Size = UDim2.new(0, 320, 0, 120)
 statFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 statFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 statFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
@@ -341,54 +341,50 @@ titleLabel.Size = UDim2.new(1, 0, 0, 30)
 titleLabel.Position = UDim2.new(0, 0, 0, 8)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "STAT TRACKER"
+titleLabel.Text = "CURRENCY TRACKER"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 14
 titleLabel.ZIndex = 21
 titleLabel.Parent = statFrame
 
 local containerFrame = Instance.new("Frame")
-containerFrame.Size = UDim2.new(1, -20, 0, 120)
+containerFrame.Size = UDim2.new(1, -20, 0, 70)
 containerFrame.Position = UDim2.new(0, 10, 0, 42)
 containerFrame.BackgroundTransparency = 1
 containerFrame.ZIndex = 21
 containerFrame.Parent = statFrame
 
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0, 108, 0, 26)
-gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+gridLayout.CellSize = UDim2.new(0, 95, 0, 30)
+gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
 gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = containerFrame
 
-local statConfig = {
-    {id = "coins", keywords = {"coin", "coins"}, display = "coins"},
-    {id = "rubies", keywords = {"ruby", "rubies"}, display = "rubies"},
-    {id = "gems", keywords = {"gem", "gems"}, display = "gems"},
-    {id = "vip_key", keywords = {"vip key", "vipkey"}, display = "VIP key"},
-    {id = "vip_upper", keywords = {"vip upper", "vip upper half", "upper"}, display = "VIP upper half"},
-    {id = "vip_lower", keywords = {"vip lower", "vip lower half", "lower"}, display = "VIP lower half"},
-    {id = "party_eggs", keywords = {"party egg", "party eggs", "party"}, display = "party eggs"},
-    {id = "alien_eggs", keywords = {"alien egg", "alien eggs", "alien"}, display = "alien eggs"}
+-- Focused strictly on Currencies
+local currencyConfig = {
+    {id = "coins", keywords = {"coin", "coins"}, display = "Coins"},
+    {id = "rubies", keywords = {"ruby", "rubies"}, display = "Rubies"},
+    {id = "gems", keywords = {"gem", "gems"}, display = "Gems"}
 }
 
-local statLabels = {}
+local currencyLabels = {}
 
-for i, cfg in ipairs(statConfig) do
+for i, cfg in ipairs(currencyConfig) do
     local lbl = Instance.new("TextLabel")
     lbl.LayoutOrder = i
     lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
+    lbl.Font = Enum.Font.GothamBold
     lbl.Text = string.format("%s: 0", cfg.display)
     lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
     lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.ZIndex = 22
     lbl.Parent = containerFrame
-    statLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
+    currencyLabels[cfg.id] = {label = lbl, keywords = cfg.keywords, display = cfg.display}
 end
 
--- Toggle Stat Tracker Visibility & Background Overlay
+-- Toggle Tracker Visibility & Background Overlay
 local statTrackerActive = true
 statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerActive = not statTrackerActive
@@ -397,7 +393,7 @@ statTrackerBtn.MouseButton1Click:Connect(function()
     statTrackerBtn.Text = statTrackerActive and "  Stat Tracker: On" or "  Stat Tracker: Off"
 end)
 
--- Color Selection
+-- Color Selection UI logic
 local function selectBlack()
     radioBlack.Text = "  (*) Black"
     radioBlack.TextColor3 = Color3.fromRGB(100, 225, 120)
@@ -408,7 +404,7 @@ local function selectBlack()
     statFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
     statStroke.Color = Color3.fromRGB(55, 62, 80)
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    for _, item in pairs(statLabels) do
+    for _, item in pairs(currencyLabels) do
         item.label.TextColor3 = Color3.fromRGB(220, 220, 220)
     end
 end
@@ -423,7 +419,7 @@ local function selectWhite()
     statFrame.BackgroundColor3 = Color3.fromRGB(240, 242, 245)
     statStroke.Color = Color3.fromRGB(180, 185, 195)
     titleLabel.TextColor3 = Color3.fromRGB(20, 22, 30)
-    for _, item in pairs(statLabels) do
+    for _, item in pairs(currencyLabels) do
         item.label.TextColor3 = Color3.fromRGB(30, 32, 40)
     end
 end
@@ -439,11 +435,6 @@ statFrame.InputBegan:Connect(function(input)
         stDragging = true
         stDragStart = input.Position
         stStartPos = statFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                stDragging = false
-            end
-        end)
     end
 end)
 
@@ -461,47 +452,45 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ========================================================================
--- NUMBER FORMATTER (Abbreviated Units: b, t, qd, qi, sx, sp, oc, No)
+-- EXACT SCIENTIFIC SUFFIX FORMATTER (b, t, qd, qi, sx, sp, oc, No)
 -- ========================================================================
 local function formatNumber(n)
-    if type(n) ~= "number" then 
+    if type(n) ~= "number" then
         local parsed = tonumber(n)
         if not parsed then return tostring(n) end
         n = parsed
     end
-    
+
     if n < 1000 then
         return tostring(math.floor(n))
     end
 
     local suffixes = {"b", "t", "qd", "qi", "sx", "sp", "oc", "No"}
     local thresholds = {1e9, 1e12, 1e15, 1e18, 1e21, 1e24, 1e27, 1e30}
-    
-    -- Handle millions / billions baseline mapping
-    if n >= 1e9 then
-        for i = #thresholds, 1, -1 do
-            if n >= thresholds[i] then
-                return string.format("%.2ff", n / thresholds[i]):gsub("%.?0+f$", suffixes[i])
-            end
+
+    for i = #thresholds, 1, -1 do
+        if n >= thresholds[i] then
+            local val = n / thresholds[i]
+            return string.format("%.2f%s", val, suffixes[i]):gsub("%.?0+([a-zA-Z]+)", "%1")
         end
     end
 
-    -- Standard comma formatter for numbers under 1 billion
-    local formatted = tostring(math.floor(n))
-    local k
-    while true do
-        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
-        if k == 0 then break end
+    -- Fallback standard short formatting for millions or thousands
+    if n >= 1e6 then
+        return string.format("%.2fm", n / 1e6):gsub("%.?0+m", "m")
+    elseif n >= 1e3 then
+        return string.format("%.2fk", n / 1e3):gsub("%.?0+k", "k")
     end
-    return formatted
+
+    return tostring(math.floor(n))
 end
 
 -- ========================================================================
--- ADVANCED REAL-TIME STAT SCANNER LOOP
+-- LIVE REAL-TIME CURRENCY SCANNER LOOP
 -- ========================================================================
 task.spawn(function()
     while screenGui.Parent do
-        task.wait(0.3)
+        task.wait(0.2) -- Fast live poll update
         pcall(function()
             local searchRoots = {
                 player:FindFirstChild("leaderstats"),
@@ -509,25 +498,22 @@ task.spawn(function()
                 player:FindFirstChild("Stats"),
                 player:FindFirstChild("Currency"),
                 player:FindFirstChild("Values"),
-                player:FindFirstChild("Inventory"),
-                player:FindFirstChild("Eggs"),
-                player:FindFirstChild("Keys"),
                 player:FindFirstChild("PlayerGui"),
                 player
             }
 
-            for statId, item in pairs(statLabels) do
+            for statId, item in pairs(currencyLabels) do
                 local detectedVal = nil
-                local instanceCount = 0
 
-                -- 1. Check Player Attributes
+                -- 1. Scan Player Attributes
                 local attributes = player:GetAttributes()
                 for attrName, attrVal in pairs(attributes) do
                     local lowerAttr = string.lower(attrName)
                     for _, kw in ipairs(item.keywords) do
                         if lowerAttr == kw or lowerAttr:find(kw) then
-                            if type(attrVal) == "number" or tonumber(attrVal) then
-                                detectedVal = tonumber(attrVal)
+                            local num = tonumber(attrVal)
+                            if num then
+                                detectedVal = num
                                 break
                             end
                         end
@@ -535,29 +521,19 @@ task.spawn(function()
                     if detectedVal then break end
                 end
 
-                -- 2. Deep Search across Data, Values, Inventories, and Folders
+                -- 2. Scan ValueObjects & Data Containers
                 if not detectedVal then
                     for _, root in ipairs(searchRoots) do
                         if root then
                             for _, descendant in ipairs(root:GetDescendants()) do
-                                if not descendant:IsA("BasePart") and not descendant:IsA("Accoutrement") and not descendant:IsA("GuiObject") then
+                                if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
                                     local lowerName = string.lower(descendant.Name)
                                     for _, kw in ipairs(item.keywords) do
-                                        if lowerName == kw or (lowerName:find(kw) and not lowerName:find("mesh") and not lowerName:find("body")) then
-                                            if descendant:IsA("ValueBase") or descendant:IsA("StringValue") then
-                                                local num = tonumber(descendant.Value)
-                                                if num then
-                                                    detectedVal = num
-                                                    break
-                                                end
-                                            elseif descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Quantity") then
-                                                local amt = tonumber(descendant:GetAttribute("Amount") or descendant:GetAttribute("Count") or descendant:GetAttribute("Quantity"))
-                                                if amt then
-                                                    detectedVal = amt
-                                                    break
-                                                end
-                                            else
-                                                instanceCount = instanceCount + 1
+                                        if lowerName == kw or lowerName:find(kw) then
+                                            local num = tonumber(descendant.Value)
+                                            if num then
+                                                detectedVal = num
+                                                break
                                             end
                                         end
                                     end
@@ -569,12 +545,32 @@ task.spawn(function()
                     end
                 end
 
-                -- Fallback to instance counter if items are unique folders/objects
-                if detectedVal == nil and instanceCount > 0 then
-                    detectedVal = instanceCount
+                -- 3. Screen UI HUD Text Label Direct Parser (Catches client-side UI elements instantly)
+                if not detectedVal then
+                    local pGui = player:FindFirstChild("PlayerGui")
+                    if pGui then
+                        for _, guiElem in ipairs(pGui:GetDescendants()) do
+                            if guiElem:IsA("TextLabel") and guiElem.Visible and guiElem.Parent and guiElem.Parent.Name ~= "HennessyHubGUI" then
+                                local lowerContext = string.lower(guiElem.Name .. " " .. guiElem.Parent.Name)
+                                for _, kw in ipairs(item.keywords) do
+                                    if lowerContext:find(kw) then
+                                        local rawText = guiElem.Text
+                                        -- Clean string to extract digits
+                                        local cleanText = string.gsub(rawText, "[^0-9.]", "")
+                                        local parsed = tonumber(cleanText)
+                                        if parsed and parsed > 0 then
+                                            detectedVal = parsed
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                            if detectedVal then break end
+                        end
+                    end
                 end
 
-                -- 3. Update Label UI with Short Unit Formatter
+                -- Update Text Label with formatted live values
                 if detectedVal ~= nil then
                     item.label.Text = string.format("%s: %s", item.display, formatNumber(detectedVal))
                 else
@@ -596,10 +592,7 @@ local function sendTouchPing()
     end)
 end
 
-player.Idled:Connect(function()
-    sendTouchPing()
-end)
-
+player.Idled:Connect(sendTouchPing)
 task.spawn(function()
     while screenGui.Parent do
         task.wait(240)
@@ -608,7 +601,7 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- DRAGGABLE TOP MENU LOGIC & KILL SWITCH
+-- MENU CONTROLS & WEBHOOK SETUP
 -- ========================================================================
 local dragging, dragInput, dragStart, startPos
 local hasMoved = false
@@ -619,12 +612,6 @@ mainButton.InputBegan:Connect(function(input)
         hasMoved = false
         dragStart = input.Position
         startPos = mainButton.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
     end
 end)
 
@@ -637,215 +624,20 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        if delta.Magnitude > 3 then
-            hasMoved = true
-        end
+        if delta.Magnitude > 3 then hasMoved = true end
         mainButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
 mainButton.MouseButton1Click:Connect(function()
-    if hasMoved then
-        hasMoved = false
-        return
-    end
+    if hasMoved then hasMoved = false return end
     dropdownContainer.Visible = not dropdownContainer.Visible
 end)
 
--- Master Kill Switch
 closeButton.MouseButton1Click:Connect(function()
     getgenv().AutoRejoinActive = false
     restoreOriginal()
     screenGui:Destroy()
 end)
 
--- ========================================================================
--- WEBHOOK POPUP PROMPT
--- ========================================================================
-local function createWebhookPopup()
-    if WEBHOOK_URL and WEBHOOK_URL ~= "YOUR_DISCORD_WEBHOOK_URL_HERE" then
-        return
-    end
-
-    local blurOverlay = Instance.new("Frame")
-    blurOverlay.Size = UDim2.new(1, 0, 1, 0)
-    blurOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    blurOverlay.BackgroundTransparency = 0.5
-    blurOverlay.ZIndex = 999
-    blurOverlay.Parent = screenGui
-
-    local promptFrame = Instance.new("Frame")
-    promptFrame.Size = UDim2.new(0, 360, 0, 160)
-    promptFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    promptFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    promptFrame.BackgroundColor3 = Color3.fromRGB(24, 27, 36)
-    promptFrame.BorderSizePixel = 0
-    promptFrame.ZIndex = 1000
-    promptFrame.Parent = screenGui
-
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 10)
-    frameCorner.Parent = promptFrame
-
-    local frameStroke = Instance.new("UIStroke")
-    frameStroke.Color = Color3.fromRGB(55, 62, 80)
-    frameStroke.Thickness = 1.5
-    frameStroke.Parent = promptFrame
-
-    local promptTitle = Instance.new("TextLabel")
-    promptTitle.Size = UDim2.new(1, -50, 0, 40)
-    promptTitle.Position = UDim2.new(0, 15, 0, 10)
-    promptTitle.BackgroundTransparency = 1
-    promptTitle.Font = Enum.Font.Gotham
-    promptTitle.Text = "Enter Discord Webhook URL"
-    promptTitle.TextColor3 = Color3.fromRGB(210, 215, 225)
-    promptTitle.TextSize = 15
-    promptTitle.TextXAlignment = Enum.TextXAlignment.Left
-    promptTitle.ZIndex = 1001
-    promptTitle.Parent = promptFrame
-
-    local promptClose = Instance.new("TextButton")
-    promptClose.Size = UDim2.new(0, 32, 0, 32)
-    promptClose.Position = UDim2.new(1, -42, 0, 14)
-    promptClose.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
-    promptClose.Font = Enum.Font.Gotham
-    promptClose.Text = "X"
-    promptClose.TextColor3 = Color3.fromRGB(180, 185, 195)
-    promptClose.TextSize = 14
-    promptClose.ZIndex = 1002
-    promptClose.Parent = promptFrame
-
-    local pcCorner = Instance.new("UICorner")
-    pcCorner.CornerRadius = UDim.new(0, 6)
-    pcCorner.Parent = promptClose
-
-    local textBox = Instance.new("TextBox")
-    textBox.Size = UDim2.new(0, 320, 0, 35)
-    textBox.Position = UDim2.new(0.5, -160, 0, 60)
-    textBox.BackgroundColor3 = Color3.fromRGB(32, 36, 48)
-    textBox.Font = Enum.Font.Gotham
-    textBox.PlaceholderText = "Paste webhook URL here..."
-    textBox.Text = ""
-    textBox.TextColor3 = Color3.fromRGB(210, 215, 225)
-    textBox.PlaceholderColor3 = Color3.fromRGB(120, 125, 140)
-    textBox.TextSize = 13
-    textBox.ClearTextOnFocus = false
-    textBox.ZIndex = 1001
-    textBox.Parent = promptFrame
-
-    local boxCorner = Instance.new("UICorner")
-    boxCorner.CornerRadius = UDim.new(0, 6)
-    boxCorner.Parent = textBox
-
-    local submitButton = Instance.new("TextButton")
-    submitButton.Size = UDim2.new(0, 320, 0, 35)
-    submitButton.Position = UDim2.new(0.5, -160, 0, 108)
-    submitButton.BackgroundColor3 = Color3.fromRGB(45, 52, 68)
-    submitButton.Font = Enum.Font.Gotham
-    submitButton.Text = "Submit"
-    submitButton.TextColor3 = Color3.fromRGB(210, 215, 225)
-    submitButton.TextSize = 13
-    submitButton.ZIndex = 1001
-    submitButton.Parent = promptFrame
-
-    local sbCorner = Instance.new("UICorner")
-    sbCorner.CornerRadius = UDim.new(0, 6)
-    sbCorner.Parent = submitButton
-
-    submitButton.MouseButton1Click:Connect(function()
-        local inputContent = textBox.Text
-        if inputContent and inputContent ~= "" then
-            WEBHOOK_URL = inputContent
-            getgenv().WebhookUrl = inputContent
-            promptFrame:Destroy()
-            blurOverlay:Destroy()
-            sendWebhook("Webhook Connected", "Successfully linked webhook to script!", 65280)
-        else
-            textBox.PlaceholderText = "Please enter a valid URL!"
-        end
-    end)
-
-    promptClose.MouseButton1Click:Connect(function()
-        promptFrame:Destroy()
-        blurOverlay:Destroy()
-    end)
-end
-
-task.spawn(createWebhookPopup)
-
--- ========================================================================
--- AUTO RECONNECT & ERROR MONITORING
--- ========================================================================
-local hasSentWebhook = false
-
-local function triggerRejoin(reason)
-    if not getgenv().AutoRejoinActive then return end
-    
-    if not hasSentWebhook then
-        hasSentWebhook = true
-        getgenv().JustReconnectedFlag = true
-        sendWebhook("Disconnected", "Reconnecting due to: " .. tostring(reason), 16711680)
-    end
-
-    while getgenv().AutoRejoinActive do
-        pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
-        end)
-        task.wait(2)
-        pcall(function()
-            TeleportService:Teleport(game.PlaceId, player)
-        end)
-        task.wait(4)
-    end
-end
-
-TeleportService.TeleportInitFailed:Connect(function(targetPlayer, _, errorMessage)
-    if targetPlayer == player then
-        triggerRejoin("TeleportInitFailed: " .. tostring(errorMessage))
-    end
-end)
-
-pcall(function()
-    GuiService.ErrorMessageChanged:Connect(function()
-        local err = GuiService:GetErrorMessage()
-        if err and err ~= "" then
-            triggerRejoin("GuiService Error: " .. err)
-        end
-    end)
-end)
-
-pcall(function()
-    ScriptContext.MessageOut:Connect(function(message, messageType)
-        local lowerMsg = string.lower(message)
-        if lowerMsg:find("shutdown") or lowerMsg:find("server shutting down") or lowerMsg:find("restart") then
-            triggerRejoin("Server Shutdown Event Log: " .. message)
-        end
-    end)
-end)
-
-task.spawn(function()
-    while screenGui.Parent do
-        task.wait(0.3)
-        pcall(function()
-            local robloxGui = CoreGui:FindFirstChild("RobloxGui")
-            if robloxGui then
-                for _, descendant in ipairs(robloxGui:GetDescendants()) do
-                    if descendant:IsA("TextLabel") and descendant.Visible then
-                        local text = string.lower(descendant.Text)
-                        if text:find("disconnected") or text:find("lost connection") or text:find("reconnect") or text:find("error code") or text:find("shut down") or text:find("server restart") then
-                            triggerRejoin("CoreGui Text Match: " .. descendant.Text)
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(leavingPlayer)
-    if leavingPlayer == player then
-        triggerRejoin("PlayerRemoving Event")
-    end
-end)
-
-print("[Hennessy Hub] Stat Tracker with Abbreviated Number Formatter Loaded!")
+print("[Hennessy Hub] Live Currency Tracker Running Successfully!")
